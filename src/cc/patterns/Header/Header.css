@@ -1,0 +1,363 @@
+/* CCHeader — main page header (white bar) for the CC product.
+ * Figma: ETKqleZdpertwFEo40YB5n (CC Hybrid). Component set 4105:3641.
+ *
+ * Type axes:
+ *   - Default:  title only
+ *   - Sub Text: title + subtitle row
+ *   - Control:  avatar + name + user details (Affino, Job title)
+ *   - Record:   record type + title + record actions (DS file RecordHeader 3867:2138)
+ * Device responsiveness is CONTAINER-QUERY based: markup wraps the header in
+ * `.cc-header-cq` (container: cc-header / inline-size) and rules use
+ * `@container cc-header (max-width: 767px)`, so the header reflows on its own
+ * column width, not the viewport. The Control variant also hides the user
+ * details (Affino / Job title rows) on mobile, leaving avatar + name only.
+ */
+
+/* Container-query wrapper. The container MUST be a separate ancestor: an element
+ * cannot query its own container, so .cc-header (and its descendants) read the
+ * width of this wrapper instead. This lets the header reflow on its own column
+ * width rather than the viewport (e.g. ControlScreen's docked-sidebar layout). */
+.cc-header-cq {
+  display: block;
+  width: 100%;
+  container: cc-header / inline-size;
+}
+
+.cc-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--ao-spacing-11); /* 64px desktop */
+  padding: var(--ao-spacing-5);
+  background-color: var(--cc-header-secondary-bg);
+}
+
+/* ── Title block (flex-1) ────────────────────────────── */
+
+.cc-header__title-block {
+  flex: 1 0 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.cc-header__title-block-text {
+  flex: 1 0 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.cc-header__title {
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-bold);
+  font-size: var(--ao-font-fixed-xl); /* 22px desktop */
+  line-height: 1;
+  color: var(--ao-text-primary);
+  letter-spacing: var(--ao-tracking-3);
+  font-feature-settings: 'calt' 0;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.cc-header__subtitle {
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xs); /* 14px */
+  line-height: var(--ao-leading-sm); /* 20px */
+  color: var(--ao-text-contrast);
+  letter-spacing: var(--ao-tracking-4);
+  font-feature-settings: 'calt' 0;
+  white-space: nowrap;
+  margin: 0;
+}
+
+/* ── Right-hand actions ──────────────────────────────── */
+
+.cc-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3); /* 8px desktop */
+  flex-shrink: 0;
+}
+
+/* Wrapping label so we can hide it on mobile to collapse text+icon buttons
+ * to icon-only sized buttons. */
+.cc-header__btn-label {
+  display: inline;
+}
+
+/* An icon a header button shows only once its label is hidden — a text-only button on desktop that
+ * still needs an icon to be named on mobile (Article Edit's tertiary Cancel; designer, 2026-10-05).
+ * Lucide carries the class onto the <svg>. */
+.cc-header__btn-icon--mobile {
+  display: none;
+}
+
+/* Contextual override — NotificationBadge inside CCHeader uses the header bg
+ * for its halo border so the badge separates cleanly from whatever colour the
+ * header is rendering in (light/dark CC mode). Case B per CLAUDE.md. */
+.cc-header .notification-badge__count {
+  border-color: var(--cc-header-secondary-bg);
+}
+
+/* Contextual override — tertiary button icons (the bell inside NotificationBadge)
+ * render at 20px in the header, vs the default 16px. Case B per CLAUDE.md. */
+.cc-header .btn--tertiary [data-lucide] {
+  width: var(--ao-icon-size-md);
+  height: var(--ao-icon-size-md);
+}
+
+/* Contextual override — tertiary buttons in the header render with no background
+ * on default and hover (active/focus keep their states for visual feedback). */
+.cc-header .btn--tertiary,
+.cc-header .btn--tertiary:hover {
+  background-color: transparent;
+}
+
+/* ── Kebab menu (overflow trigger) ───────────────────── */
+
+.cc-header__kebab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ao-icon-size-lg); /* 24px */
+  height: var(--ao-icon-size-lg);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--ao-icon-secondary);
+  cursor: pointer;
+  transition: color var(--ao-transition-default);
+}
+
+.cc-header__kebab:hover {
+  color: var(--ao-text-primary);
+}
+
+.cc-header__kebab [data-lucide] {
+  width: var(--ao-icon-size-lg);
+  height: var(--ao-icon-size-lg);
+}
+
+/* The kebab is always the last action at the header's right edge, so its menu opens leftwards —
+ * the DS Dropdown's default left:0 would run off the page (as the listing's Settings panel). */
+.cc-header__actions .dropdown__panel {
+  left: auto;
+  inset-inline-end: 0;
+}
+
+/* The panel hangs spacing-3 below its .dropdown box — which, round the 24px kebab, sits inside the
+ * 40px button row, so the open menu touched the Edit / Add buttons. The box stretches to the row
+ * (kebab re-centred) so the menu clears the buttons by the Dropdown's own spacing-3. */
+.cc-header__actions > .dropdown {
+  align-self: stretch;
+  justify-content: center;
+}
+
+/* ── Type=Sub Text ───────────────────────────────────── */
+
+.cc-header--sub-text .cc-header__title-block-text {
+  gap: var(--ao-spacing-1); /* 4px between title and subtitle */
+}
+
+/* ── Type=Record ─────────────────────────────────────── */
+/* Record screen header (View / Edit / Steps): record type above the title,
+ * Add + Edit (view) or Cancel + Save (edit) on the right, bottom border.
+ * Figma: Lus07xi8pPXLN87sQIyrEt · View & Edit page · RecordHeader 3867:2138 */
+
+.cc-header--record {
+  gap: var(--ao-spacing-5);
+  border-bottom: 1px solid var(--ao-border-secondary);
+}
+
+.cc-header--record .cc-header__title-block-text {
+  gap: var(--ao-spacing-1);
+}
+
+.cc-header__record-type {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-contrast);
+}
+
+.cc-header--record .cc-header__title {
+  line-height: var(--ao-leading-md);
+  white-space: normal;
+}
+
+/* ── Type=Control ────────────────────────────────────── */
+
+.cc-header--control .cc-header__title-block {
+  gap: var(--ao-spacing-4); /* 12px desktop between avatar and text column */
+}
+
+.cc-header--control .cc-header__title-block-text {
+  gap: var(--ao-spacing-3); /* 8px between title and user details */
+  height: 100%;
+}
+
+.cc-header--control .portrait {
+  width: var(--ao-spacing-9); /* 48px desktop */
+  height: var(--ao-spacing-9);
+  flex-shrink: 0;
+  display: block;
+  border-radius: var(--ao-radius-full);
+  object-fit: cover;
+}
+
+.cc-header__user-details {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-5); /* 16px */
+}
+
+.cc-header__user-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-2); /* 6px */
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xs); /* 14px */
+  line-height: var(--ao-leading-sm); /* 20px */
+  color: var(--ao-text-contrast);
+  letter-spacing: var(--ao-tracking-4);
+  font-feature-settings: 'calt' 0;
+}
+
+.cc-header__user-item [data-lucide] {
+  width: var(--ao-icon-size-sm); /* 16px */
+  height: var(--ao-icon-size-sm);
+  color: var(--ao-icon-secondary);
+  flex-shrink: 0;
+}
+
+/* ── Mobile (≤767px container width) ─────────────────────
+ *
+ * Container-query based so the header collapses to compact mobile
+ * dress whenever the header itself is narrower than 768px — even on a
+ * wide viewport where it sits next to a docked sidebar. */
+
+@container cc-header (max-width: 767px) {
+  .cc-header {
+    /* 48px, down from Figma's 56. Designer, 2026-09-21: the Header and the
+       TopNavigation above it take the SAME height on a phone. Figma's mobile
+       variant still says 56 — an instruction that overrides it, not a reading
+       of it, so Figma wants updating rather than this line "fixing" back. */
+    min-height: var(--ao-spacing-9); /* 48px on mobile */
+    padding: var(--ao-spacing-3) var(--ao-spacing-4); /* 8px / 12px */
+  }
+
+  .cc-header__title {
+    font-size: var(--ao-font-fixed-sm); /* 16px on mobile */
+  }
+
+  .cc-header__subtitle {
+    line-height: var(--ao-leading-xs); /* 16px on mobile */
+  }
+
+  .cc-header__actions {
+    gap: var(--ao-spacing-2); /* 6px on mobile */
+  }
+
+  .cc-header .notification-badge__count {
+    top: var(--ao-spacing-1);
+    right: var(--ao-spacing-1);
+  }
+
+  /* Collapse text+icon buttons to icon-only 32px square on mobile.
+   * Pattern per CLAUDE.md "Mobile child-component sizing":
+   * scoped override to force btn--sm + btn--icon dimensions. */
+  .cc-header__actions .btn {
+    padding: 0;
+    width: var(--ao-spacing-7); /* 32px */
+    min-height: var(--ao-spacing-7);
+    gap: 0;
+  }
+
+  .cc-header__actions .cc-header__btn-label {
+    display: none;
+  }
+
+  .cc-header__actions .cc-header__btn-icon--mobile {
+    display: inline-block;
+  }
+
+  /* …and that same text-only (tertiary) button takes Button Secondary's paint on mobile, so the
+   * bare icon still reads as a button beside its filled neighbours (designer, 2026-10-05). */
+  .cc-header__actions .cc-header__btn--bordered-mobile {
+    background-color: var(--ao-btn-secondary-bg);
+    color: var(--ao-btn-secondary-text);
+    border-color: var(--ao-btn-secondary-border);
+  }
+
+  .cc-header__actions .cc-header__btn--bordered-mobile:hover {
+    background-color: var(--ao-btn-secondary-bg-hover);
+    border-color: var(--ao-btn-secondary-border-hover);
+    color: var(--ao-btn-secondary-text-hover);
+  }
+
+  .cc-header__actions .cc-header__btn--bordered-mobile:active {
+    background-color: var(--ao-btn-secondary-bg-pressed);
+    border-color: var(--ao-btn-secondary-border);
+  }
+
+  .cc-header__actions .cc-header__btn--bordered-mobile:focus-visible {
+    background-color: var(--ao-btn-secondary-bg-hover);
+    border-color: var(--ao-surface-primary);
+    box-shadow: 0 0 0 2px var(--ao-btn-secondary-border);
+    color: var(--ao-btn-secondary-text-hover);
+  }
+
+  /* Type=Control mobile adjustments */
+  .cc-header--control .cc-header__title-block {
+    gap: var(--ao-spacing-3); /* 8px on mobile */
+  }
+
+  .cc-header--control .portrait {
+    width: var(--ao-spacing-7); /* 32px on mobile */
+    height: var(--ao-spacing-7);
+  }
+
+  .cc-header--control .cc-header__title {
+    line-height: 1.1; /* matches Figma Mobile Control */
+  }
+
+  /* Hide user details on mobile Control */
+  .cc-header--control .cc-header__user-details {
+    display: none;
+  }
+
+  /* Tighter gap for Control mobile actions */
+  .cc-header--control .cc-header__actions {
+    gap: var(--ao-spacing-1); /* 4px on Control mobile per Figma */
+  }
+
+  /* Record title: leading-sm on mobile (designer amend, 2026-09-30; desktop keeps leading-md). */
+  .cc-header--record .cc-header__title-block-text {
+    gap: var(--ao-spacing-0-5);   /* designer amend, 2026-09-30; desktop spacing-1 */
+  }
+
+  .cc-header--record .cc-header__title {
+    line-height: var(--ao-leading-sm);
+  }
+
+  /* Record type label on mobile (designer amend, 2026-09-30): 2xs / leading-xs (desktop xs /
+   * leading-sm). Margin, family and weight are unchanged from the base rule. */
+  .cc-header__record-type {
+    font-size: var(--ao-font-fixed-2xs);
+    line-height: var(--ao-leading-xs);
+  }
+
+  /* Type=Record follows the icon-only collapse above like every CC header (designer,
+   * 2026-09-30). It used to keep its labels (2026-09-28) because Cancel and Add had no
+   * icon; every header button now has one (Add plus, Cancel x). */
+  .cc-header--record .cc-header__actions {
+    flex-shrink: 0;
+  }
+}

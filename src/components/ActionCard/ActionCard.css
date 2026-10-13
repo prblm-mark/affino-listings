@@ -1,0 +1,81 @@
+/* ActionCard component — uses only --ao-* design tokens.
+   A single-row card: a title that fills the row plus a trailing action
+   (an xs Tertiary Button, or a right-chevron affordance). */
+
+.action-card {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-6);
+  width: 100%;
+  min-height: var(--ao-spacing-10);
+  padding: var(--ao-spacing-4);
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  text-decoration: none;
+  transition: border-color var(--ao-transition-default);
+}
+
+/* Hover darkens the border for both Action variants (Figma State=Hover). */
+.action-card:hover {
+  border-color: var(--ao-border-primary);
+  text-decoration: none;
+}
+
+/* Title fills the row and truncates with an ellipsis. */
+.action-card__title {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-sm);
+  letter-spacing: var(--ao-tracking-5);
+  color: var(--ao-text-primary);
+}
+
+/* Right-chevron affordance (Action=Right Chevron variant). */
+.action-card__chevron {
+  flex-shrink: 0;
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  color: var(--ao-icon-secondary);
+}
+
+/* ── Description (code-first, 2026-09-30 — Article steps "Add a step" chooser; flag for Figma) ──
+ * Optional second line under the title. The title and description share a `__text` column, which
+ * takes the title's fill-the-row role; inside it the title keeps its own ellipsis, and the
+ * description wraps (it explains the choice, so it must not be cut off). Type tokens are the
+ * Modal subtitle's, the nearest existing "supporting line" in the kit. */
+.action-card__text {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--ao-spacing-1);
+  min-width: 0;
+}
+
+/* In the column the title's row-fill `flex: 1 1 0` would become a zero height basis. */
+.action-card__text .action-card__title { flex: none; }
+
+.action-card__desc {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-2xs);
+  font-weight: var(--ao-font-regular);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-secondary);
+}
+
+/* Unavailable choice (code-first): stays readable so its description can say why, but takes
+ * no hover and no pointer. Rendered as a <div aria-disabled="true">, not a link. */
+.action-card--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.action-card--disabled:hover { border-color: var(--ao-border-secondary); }

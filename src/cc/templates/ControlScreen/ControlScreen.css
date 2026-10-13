@@ -1,0 +1,942 @@
+/* ControlScreen — CC home/landing dashboard template (Tier=Template)
+ * Figma: ETKqleZdpertwFEo40YB5n / 4187:21254
+ *
+ * App-shell ONLY. No component styles defined here — every visual block
+ * comes from an existing component's CSS (Alert / StatCard / UpgradeCard /
+ * Select / Chart / Datatables / cc-sidebar-menu / cc-header-group, etc.).
+ *
+ * Layout:
+ *   .cc-control          flex row, viewport-filling
+ *   ├─ .cc-control__sidebar    cc-sidebar-menu lives here (fixed left)
+ *   └─ .cc-control__main       flex column, fills remainder
+ *      ├─ .cc-control__chrome  cc-header-group (top, non-scrolling)
+ *      └─ .cc-control__page    scroll container for page content
+ */
+
+.cc-control {
+  display: flex;
+  align-items: stretch;
+  /* `vh` first as the fallback, then `dvh` (2026-08-27, from Samsung S23 testing).
+   *
+   * On mobile Chrome `100vh` is the LARGE viewport — the height the page would have if the URL
+   * bar were hidden. With the bar showing, a 100vh shell therefore runs about 75px BELOW the
+   * fold, which is why the empty-state sheets had their bottom edge and rounded corner cut off
+   * on the device while looking correct in a desktop window.
+   *
+   * `dvh` tracks the visible viewport as the browser chrome shows and hides, so the shell always
+   * fits. `svh` would also never overflow but leaves dead space once the bar retracts. Browsers
+   * without `dvh` keep the `vh` line above. */
+  min-height: 100vh;
+  height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
+  margin: 0;
+  background: var(--cc-ui-primary-bg);
+  font-family: var(--ao-font-body);
+}
+
+.cc-control__sidebar {
+  flex: 0 0 auto;
+  /* Same dvh reasoning as `.cc-control` above — the rail must match the shell exactly or it
+   * either falls short of the fold or pushes past it. */
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  /* Stack above .cc-control__main so the cc-sidebar-menu's right-
+   * edge drop shadow (var(--ao-shadow-cc-rail), applied when the menu
+   * panel is docked open) paints over the chrome + page backgrounds
+   * instead of being obscured by them. Sidebar and main are flex
+   * siblings under .cc-control; without z-index, main paints last
+   * in DOM order and its opaque backgrounds cover the sidebar shadow. */
+  position: relative;
+  z-index: 2;
+}
+
+.cc-control__sidebar .cc-sidebar-menu {
+  height: 100%;
+}
+
+.cc-control__main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  /* OUTER container query context, `cs-main` (2026-08-27). `.cc-control__page` below
+   * establishes `cs-page` and therefore cannot query it for its OWN properties — an element
+   * can never query the container it declares. So the page's padding and gap had to stay
+   * viewport-keyed, which is wrong for exactly the reason the cs-page comment already gives:
+   * a docked SidebarMenu shrinks this column far below 768px on a wide screen. `cs-main` sits
+   * one level out, so the page can respond to its real available width.
+   *
+   * `container-type` is required as well as the name: a name alone leaves container-type at
+   * `normal`, which is not a query container at all. Safe here because this column's width
+   * comes from the flex row, never from its contents. Note it also makes this element a
+   * containing block for absolutely positioned descendants — the chrome dropdowns were
+   * re-measured after this change for exactly that reason. */
+  container-name: cs-main;
+  container-type: inline-size;
+  /* No `overflow: hidden` here — it would clip dropdown panels opening
+   * from the top chrome (Zone Selector, User Menu). The scroll lives
+   * one level deeper on `.cc-control__page`. */
+}
+
+.cc-control__chrome {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--ao-border-secondary);
+  /* Stacking + position so dropdown panels anchored inside (Zone
+   * Selector, User Menu) layer above the scrolling page content. */
+  position: relative;
+  z-index: 1;
+}
+
+/* Flush chrome (2026-09-23) — the full-width listing template, Figma
+   3788:16762, has no line between the CC header and the content under it
+   (designer). Set by `ccWidth.apply()` (control-width.js) alongside
+   `.cc-control__page--flush`, never written into the markup. */
+.cc-control__chrome--flush {
+  border-bottom: 0;
+}
+
+/* …but once the page scrolls under it, the rule comes back (designer,
+   2026-10-02), or scrolled content butts straight into the header.
+   `--scrolled` is kept in step by control-width.js. Drawn as a 1px shadow,
+   not a border: a border would add 1px to the chrome and nudge the page down
+   the moment scrolling starts. The chrome is z-index 1, so it paints over the
+   page beneath. */
+.cc-control__chrome--flush.cc-control__chrome--scrolled {
+  box-shadow: 0 1px 0 var(--ao-border-secondary);
+}
+
+/* Standard width, both themes (designer, 2026-10-02): once the page scrolls
+   under it, the header group lifts with shadow/sm. Full width keeps the flat
+   rule above instead. The chrome is z-index 1, so the shadow paints over the
+   page. The transition sits on the resting rule so it eases both ways. */
+.cc-control:not([data-cc-width="full"]) .cc-control__chrome .cc-header-group {
+  transition: box-shadow var(--ao-transition-default);
+}
+
+/* Only a group that holds a header block. The Seating Planner's group is the top
+   nav alone, and that screen already puts shadow/sm on the chrome itself when it
+   scrolls (SeatingPlanner.css, 2026-08-27). Without this guard it got both. */
+.cc-control:not([data-cc-width="full"]) .cc-control__chrome--scrolled .cc-header-group:has(.cc-header) {
+  box-shadow: var(--ao-shadow-sm);
+}
+
+/* Full-width toggle icon (2026-10-01) — the button carries both icons and
+   shows the one for the action it will take: unfold-horizontal at standard
+   width, fold-horizontal when full width is on. Keyed on `aria-pressed`,
+   which control-width.js keeps in step. Was `minimize-2`, freed up because
+   the older framework uses Minimise for its condensed view. Targets the
+   Lucide SVG class — createIcons() swaps the <i> for an <svg>.
+   Minimise (condensed view) follows the same pattern on the vertical axis —
+   fold-vertical off, unfold-vertical on (2026-10-01). control-width.js keeps its
+   aria-pressed in step (condensed density, 2026-10-09). */
+[data-cc-width-toggle][aria-pressed="true"] .lucide-unfold-horizontal,
+[data-cc-width-toggle]:not([aria-pressed="true"]) .lucide-fold-horizontal,
+[data-cc-condensed-toggle][aria-pressed="true"] .lucide-fold-vertical,
+[data-cc-condensed-toggle]:not([aria-pressed="true"]) .lucide-unfold-vertical {
+  display: none;
+}
+
+/* Full width, DARK only (designer, 2026-10-02). The CC header's fill,
+   cc/header/secondary-bg, is #1E293B in CCDark since the 2026-10-02 export
+   (was #334155), the same as the flush page — so header and content already
+   read as one surface and need no override here. But the sidebar menu, top
+   nav and flush page now all resolve to that one colour too, so nothing marks
+   where the menu ends: the content column gets a left rule. Light needs none,
+   because its menu is dark teal against a white page. */
+[data-theme="dark"] .cc-control[data-cc-width="full"] .cc-control__main {
+  border-inline-start: 1px solid var(--ao-border-secondary);
+}
+
+/* The top nav above the header is the same colour as it, so the two need a
+   rule between them. And the dark chrome's hairline
+   side padding (below) would leave a 1px gap at each end of the nav and
+   header in an edge-to-edge layout, so it is dropped here. */
+[data-theme="dark"] .cc-control[data-cc-width="full"] .cc-top-navigation {
+  border-block-end: 1px solid var(--ao-border-secondary);
+}
+
+[data-theme="dark"] .cc-control[data-cc-width="full"] .cc-control__chrome {
+  padding-inline: 0;
+}
+
+/* Dark, STANDARD width (designer, 2026-10-02): since the CCDark header fill
+   became #1E293B the top nav and header are one colour. A spacing-px gap
+   lets the backdrop show through between them as a line, the same hairline
+   the chrome's side padding (below) draws at each end. Full width uses a real
+   border on the top nav instead (above), because it drops that padding. */
+[data-theme="dark"] .cc-control:not([data-cc-width="full"]) .cc-header-group {
+  gap: var(--ao-spacing-px);
+}
+
+/* …and no rule under the header group, so the header meets the page directly
+   (designer, 2026-10-02). Two sources: the chrome's own border-bottom on most
+   screens, and the RecordHeader's (View / Edit / Steps), which draws its own
+   (Figma 3867:2138) while RecordScreen.css drops the chrome's. */
+[data-theme="dark"] .cc-control:not([data-cc-width="full"]) .cc-control__chrome,
+[data-theme="dark"] .cc-control:not([data-cc-width="full"]) .cc-header--record {
+  border-bottom: 0;
+}
+
+/* Dark mode: hairline horizontal padding inside the chrome wrapper. */
+[data-theme="dark"] .cc-control__chrome {
+  padding: 0 var(--ao-spacing-px);
+}
+
+/* Dropdown escape overrides — mirror the HeaderGroup demo's
+ * `.demo-frame--dropdown` scoped overrides. TopNavigation.css normally
+ * sets `overflow: hidden` on the bar; release it here so dropdown
+ * panels (Zone Selector in the breadcrumb, User Menu in the actions)
+ * can extend downward into the page area below. */
+.cc-control__chrome .cc-top-navigation {
+  overflow: visible;
+}
+.cc-control__chrome .dropdown__panel {
+  z-index: 20;
+}
+/* Right-anchor the User Menu panel so it extends LEFTWARD inside the
+ * topNav width, not off-screen to the right. */
+.cc-control__chrome .cc-top-navigation__actions .dropdown__panel {
+  left: auto;
+  right: 0;
+}
+
+.cc-control__page {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--ao-spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-7);
+  /* Container query context — template-level reflow rules below use
+     @container cs-page so the layout responds to the actual content
+     column width, not the viewport. This matters because the docked
+     SidebarMenu can shrink the column far below 768px on a wide screen. */
+  container-type: inline-size;
+  container-name: cs-page;
+  /* Keeps page content out of the chrome's paint layer (2026-08-27).
+   *
+   * `.cc-control__chrome` is `position: relative; z-index: 1`, and any component inside the page
+   * that uses `z-index: 1` — RoomCard's action buttons do — lands in the SAME layer. Equal
+   * z-index means DOM order decides, and the page comes after the chrome, so those buttons
+   * painted straight over an open user menu. Verified by hit-testing `elementFromPoint` at the
+   * overlap, not by reading the CSS.
+   *
+   * `container-type` does NOT already do this, which is the counter-intuitive part:
+   * `getComputedStyle(...).contain` reads `none` for a container-type element, and empirically
+   * it does not trap positive-z descendants. So the containment added for container queries
+   * gives no stacking protection at all — measured, having first assumed it would.
+   *
+   * `isolation: isolate` rather than bumping the chrome's z-index: a higher number is only a
+   * tie-break that the next component to use z-index: 2 defeats, whereas isolating the page
+   * means content can never escape its own region regardless of what it does internally.
+   * The ActionsMenu rail is a SIBLING of <main>, so it is unaffected. */
+  isolation: isolate;
+  /* Scrollbar: normal width + a stable gutter (no layout shift when it appears).
+     Visible by DEFAULT (CC rail grey) — this is what touch devices get, since
+     they have no hover state to reveal an overlay bar. */
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: var(--cc-actions-menu-primary-bg) transparent;
+}
+
+/* Flush page (2026-09-23) — the full-width listing template, Figma 3788:16762:
+   padding 0 and a surface/primary fill, so the content runs edge to edge.
+   Two classes on purpose: at (0,2,0) it beats every single-class padding rule
+   in this file — the base, both viewport @media trims and their coarse-pointer
+   corrections — without having to repeat each of them. The scrollbar gutter
+   stays, so nothing shifts when the page starts to scroll. Toggled by the
+   shared full-width switch, `ccWidth.apply()` in control-width.js, never
+   written into the markup. A screen whose content sits on the page colour
+   (the Seating Planner) sets its own background back. */
+.cc-control__page.cc-control__page--flush {
+  padding: 0;
+  background: var(--ao-surface-primary);
+}
+
+/* Desktop + hover-capable pointers only: hide the thumb at rest and fade it in
+   on hover (overlay-subtle). Below 768px — and on any touch / no-hover device —
+   the bar stays permanently visible (the base rule above). */
+@media (hover: hover) and (min-width: 768px) {
+  .cc-control__page {
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color var(--ao-transition-default);
+  }
+  .cc-control__page:hover {
+    scrollbar-color: var(--cc-actions-menu-primary-bg) transparent;
+  }
+}
+
+/* Flush page scrollbar (designer, 2026-10-02): edge to edge, the gutter has
+   nothing to separate it from the content, so its track gets a left rule.
+   A track border is only reachable through ::-webkit-scrollbar, which Blink
+   ignores while `scrollbar-color` is set — so WebKit/Blink drop it here and
+   draw the bar themselves; Firefox (no such selector) keeps the rules above.
+   Same colours and the same hover-reveal as the standard bar. The 3px
+   transparent border insets the thumb from the track's edges (a border
+   width, so raw px). */
+@supports selector(::-webkit-scrollbar) {
+  .cc-control__page.cc-control__page--flush,
+  .cc-control__page.cc-control__page--flush:hover {
+    scrollbar-color: auto;
+    scrollbar-width: auto;
+  }
+  .cc-control__page--flush::-webkit-scrollbar {
+    width: var(--ao-spacing-4);
+  }
+  .cc-control__page--flush::-webkit-scrollbar-track {
+    background: transparent;
+    border-left: 1px solid var(--ao-border-secondary);
+  }
+  .cc-control__page--flush::-webkit-scrollbar-thumb {
+    background-color: var(--cc-actions-menu-primary-bg);
+    background-clip: padding-box;
+    border: 3px solid transparent;
+    border-radius: var(--ao-radius-full);
+  }
+  @media (hover: hover) and (min-width: 768px) {
+    .cc-control__page--flush::-webkit-scrollbar-thumb { background-color: transparent; }
+    .cc-control__page--flush:hover::-webkit-scrollbar-thumb {
+      background-color: var(--cc-actions-menu-primary-bg);
+    }
+  }
+}
+
+/* Alert + card row share one container (Figma Frame 229, node 4183:14662):
+   stacked vertically with a --ao-spacing-5 (16px) gap — tighter than the
+   spacing-7 page gap that separates the other top-level blocks. */
+.cc-control__alert-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-5);
+}
+
+/* 3-col card row: StatCard / StatCard / UpgradeCard at desktop. */
+.cc-control__cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--ao-spacing-3);
+  align-items: stretch;
+}
+
+/* Card size: base by default (mobile / narrow column), upgrading to the
+   Lg size variant once the page container is ≥768px. The component `--lg`
+   modifier can't be toggled by CSS, so these rules mirror `.stat-card--lg`
+   (StatCard.css) and `.upgrade-card--lg` (UpgradeCard.css) exactly, scoped
+   to the cs-page container-query context. */
+@container cs-page (min-width: 768px) {
+  .cc-control__cards {
+    gap: var(--ao-spacing-5);
+  }
+  .cc-control__cards .stat-card {
+    gap: var(--ao-spacing-5);
+    min-height: var(--ao-spacing-13);
+    padding: var(--ao-spacing-5);
+  }
+  .cc-control__cards .stat-card__icon-wrap {
+    width: var(--ao-spacing-9);
+    height: var(--ao-spacing-9);
+  }
+  .cc-control__cards .stat-card__icon-wrap [data-lucide] {
+    width: var(--ao-icon-size-md);
+    height: var(--ao-icon-size-md);
+  }
+  .cc-control__cards .upgrade-card {
+    min-height: var(--ao-spacing-13);
+    padding: var(--ao-spacing-5);
+  }
+  .cc-control__cards .upgrade-card__version {
+    font-size: var(--ao-font-fixed-sm);
+  }
+  .cc-control__cards .upgrade-card__status {
+    font-size: var(--ao-font-fixed-xs);
+  }
+}
+
+/* Zone row: Select Zone (left) + Analysis Dashboard link (right). */
+/* Analysis panel — single bordered card wrapping the header bar + chart row
+   (Figma node 4186:21107). */
+.cc-control__panel {
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-datatable-table-border);
+  border-radius: var(--ao-radius-md);
+  overflow: hidden;
+  /* .cc-control__page is a fixed-height flex column; without this the panel
+     gets flex-shrunk below its content height and `overflow: hidden` (kept
+     for the rounded corners) then crops the charts. Don't shrink — let the
+     page scroll instead. */
+  flex-shrink: 0;
+}
+
+/* Header bar — Select Zone (left) + Analysis Dashboard button (right),
+   divided from the chart row by a bottom border (Figma node 4186:21108). */
+.cc-control__panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--ao-spacing-5);
+  padding: var(--ao-spacing-4) var(--ao-spacing-5);
+  border-bottom: 1px solid var(--ao-datatable-table-border);
+}
+
+/* Select Zone — Label Left Select, grows to fill up to 280px (Figma node
+   4186:21109: Select container is `flex:1 0 0; max-width:280px`). */
+.cc-control__panel-head .sel {
+  flex: 1 0 0;
+  min-width: 0;
+  max-width: var(--ao-size-5);
+}
+
+/* Analysis Dashboard — a btn--secondary with a scoped borderless override
+   (Case B contextual override, Figma node 4186:21110). Rendered as <a> for
+   navigation; trailing arrow only. The :focus-visible ring is left intact. */
+.cc-control__dash-btn,
+.cc-control__dash-btn:hover,
+.cc-control__dash-btn:active {
+  border-color: transparent;
+}
+
+/* Two copies in the DOM — one in the header bar (desktop), one as a
+   standalone block after the chart row (mobile). CSS swaps which is
+   visible at the breakpoint. */
+.cc-control__dash-btn--desktop { display: inline-flex; }
+.cc-control__dash-btn--mobile { display: none; }
+
+/* 2-col chart row inside the panel — padded inner frame (Figma node 4186:21111). */
+.cc-control__charts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--ao-spacing-5);
+  padding: var(--ao-spacing-5);
+}
+
+/* ControlScreen-scoped: hide the Chart footer (filter + report link) in both
+   chart cards. Shared Chart pattern/demo keeps its footer. */
+.cc-control__charts .chart__foot {
+  display: none;
+}
+
+/* Section wrapper (heading + body), used for Whos Online (datatable). */
+.cc-control__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-4);
+}
+
+.cc-control__section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--ao-spacing-0);
+}
+
+/* Whos Online table — two Datatables variants swapped at the cs-page
+   breakpoint: the 4-column Scroll table on desktop, the User+Login+kebab
+   Trigger table on mobile (Figma mobile node 4183:14675). Desktop is the
+   default; the mobile instance is hidden until the container narrows. */
+.cc-control__table--mobile { display: none; }
+
+.cc-control__section-title {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-md); /* 18px below MD; steps to fixed-lg (20px) at >=768 */
+  font-weight: var(--ao-font-bold);
+  color: var(--ao-text-primary);
+}
+
+.cc-control__section-meta {
+  margin: 0;
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-secondary);
+}
+
+.cc-control__section-meta-strong {
+  font-weight: var(--ao-font-bold);
+  color: var(--ao-text-primary);
+}
+
+/* MD (>=768px page-container width): section heading + meta step up to larger
+   fixed sizes. Below the breakpoint the title is fixed-md (18px) and meta fixed-xxs. */
+@container cs-page (min-width: 768px) {
+  .cc-control__section-title {
+    font-size: var(--ao-font-fixed-lg);
+  }
+  .cc-control__section-meta {
+    font-size: var(--ao-font-fixed-xs);
+  }
+}
+
+/* Mobile-only sidebar overlay container: the SidebarMenu mobile composite
+   sits in a fixed left column on phones too. The Menu panel's existing CSS
+   handles overlay behaviour via its own width / position rules. */
+.cc-control__sidebar--desktop { display: flex; }
+.cc-control__sidebar--mobile { display: none; }
+
+/* Right-edge action rail (ActionsMenu, Figma node 4167:4879). Full-height
+   rail docked to the right of the shell — the rightmost flex child of
+   .cc-control, mirroring the left sidebar. Desktop only; hidden below
+   768px (device-class swap, like the sidebar). */
+.cc-control__actions {
+  flex: 0 0 auto;
+  display: flex;
+}
+
+.cc-control__actions .actions-menu {
+  height: 100%;   /* fill the 100vh shell row → full-height rail */
+}
+
+/* Rail popovers (Info, etc.) — open inward (left of the rail), anchored to the
+   triggering button. The hosted card supplies its own bg/border/radius. */
+.cc-control__rail-item {
+  position: relative;
+  display: inline-flex;
+}
+
+.cc-control__rail-popover {
+  position: absolute;
+  top: 0;
+  right: calc(100% + var(--ao-spacing-5));
+  z-index: 50;
+}
+
+.cc-control__rail-popover .cc-actions-info-panel {
+  box-shadow: var(--ao-shadow-xl);
+}
+
+/* Popover variant that supplies its own surface card (for hosted controls that
+   aren't already a card, e.g. the FontSizeSlider). */
+.cc-control__rail-popover--card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+  padding: var(--ao-spacing-4);
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-lg);
+  box-shadow: var(--ao-shadow-xl);
+}
+
+.cc-control__rail-popover-label {
+  margin: 0;
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-semibold);
+  color: var(--ao-text-secondary);
+}
+
+/* Active look on the rail button while its popover is open, or while a toggle
+   button (the full-width Minimise) is on */
+.cc-control__actions .actions-menu__btn[aria-expanded="true"],
+.cc-control__actions .actions-menu__btn[aria-pressed="true"] {
+  background-color: var(--cc-actions-menu-secondary-bg);
+}
+
+/* ── AI Assistant panel anchor ───────────────────────────────────────
+ * The panel is reused verbatim from src/cc/templates/AiAssistant (initial
+ * view only). It keeps position:fixed so the shared drag/resize shell works
+ * unchanged — we only re-anchor it from the demo's bottom-right corner to the
+ * top-right, beside the rail's AI Assistant button. The right offset clears
+ * the 56px rail (--ao-spacing-10) plus an 8px gap (--ao-spacing-3). */
+.cc-control .ai-assistant {
+  top: var(--ao-spacing-6);
+  bottom: auto;
+  right: calc(var(--ao-spacing-10) + var(--ao-spacing-3));
+  /* Above the chrome/page/rail-popovers (z 1–50), below the fav modal (100). */
+  z-index: 60;
+}
+
+/* ── AI Assistant coachmark (AssistantPopover) ───────────────────────
+ * The pattern's own CSS is a static card (for its demo). In the ControlScreen
+ * it floats bottom-right and slides up into view on load to grab attention.
+ * Hidden + non-interactive until JS adds --visible; dismissal slides/fades it
+ * back out before the JS removes it. A long ease-out (no overshoot) makes the
+ * slide slow and smooth — not a project transition token, but transition
+ * timing is a free-form implementation detail. */
+.cc-control .cc-assistant-popover {
+  position: fixed;
+  bottom: var(--ao-spacing-6);
+  right: var(--ao-spacing-6);
+  z-index: 55;
+  opacity: 0;
+  transform: translateY(var(--ao-spacing-9));
+  pointer-events: none;
+  transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cc-control .cc-assistant-popover--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* ── Toast stack (favourites feedback) ───────────────────────────────
+ * Fixed top-right column of spawned Toast components. Above the chrome,
+ * rail-popovers, AiAssistant panel (z-60) and fav modal (z-100). The
+ * container is click-through; individual toasts re-enable pointer events.
+ * Toasts slide in from the right + fade; --leaving animates them back out
+ * before the JS removes them. */
+.cc-control .cc-toast-stack {
+  position: fixed;
+  top: var(--ao-spacing-6);
+  right: var(--ao-spacing-6);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--ao-spacing-3);
+  pointer-events: none;
+}
+
+.cc-control .cc-toast-stack .toast {
+  pointer-events: auto;
+  max-width: calc(100vw - var(--ao-spacing-6) * 2);   /* never overflow a narrow viewport */
+  opacity: 0;
+  transform: translateX(var(--ao-spacing-5));
+  transition: opacity var(--ao-transition-slow),
+              transform var(--ao-transition-slow);
+}
+
+.cc-control .cc-toast-stack .toast--in {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.cc-control .cc-toast-stack .toast--leaving {
+  opacity: 0;
+  transform: translateX(var(--ao-spacing-5));
+}
+
+/* Favourites panel list (top-level submenu used as the favourites menu) */
+.cc-control__fav-list {
+  padding: var(--ao-spacing-3) 0;
+}
+
+/* ───── Template-level reflow — driven by main column width ─────
+ *
+ * @container cs-page (max-width: 767px) fires when .cc-control__page
+ * itself shrinks below 768px — independent of viewport. So the page
+ * goes "mobile" the moment the docked SidebarMenu (rail + 240px panel)
+ * eats enough horizontal room, even on a wide desktop. */
+/* Page padding scales at the 768px VIEWPORT breakpoint — not the
+ * container breakpoint. The container query below queries `cs-page`,
+ * which IS `.cc-control__page` itself; per the CSS Containment
+ * spec an element cannot query its own container, so a
+ * `@container cs-page` rule targeting `.cc-control__page` never
+ * applies. Use viewport `@media` instead for the page's own padding.
+ * Descendants (cards, charts, zone-row, section-head) still use
+ * `@container cs-page` correctly because for them cs-page is an
+ * ancestor, not themselves. */
+@media (max-width: 767px) {
+  .cc-control__page {
+    padding: var(--ao-spacing-4);
+    /* Trim the right padding (as on desktop) so the reserved scrollbar gutter
+       doesn't make the right side look heavier than the left.
+       --ao-spacing-2 (6px) undershot: 6 + the 15px gutter read as 21 against
+       12 on the left, a 9px lean measured on every CC screen 2026-09-17.
+       --ao-spacing-0 brings it to 15 against 12 — the same 3px tolerance the
+       desktop rule lands on (24 vs 27), so both breakpoints now lean by the
+       same amount instead of mobile leaning three times as hard.
+       Exactly even is not reachable by trimming here: the reserved gutter
+       (15px) is already wider than the 12px left padding, so the only way to
+       match it would be `scrollbar-gutter: stable both-edges`, which costs
+       15px of content on each side of a 390px screen. */
+    padding-right: var(--ao-spacing-0);
+  }
+
+  /* …UNLESS the scrollbar is an overlay one, in which case there is no gutter
+   * to compensate for and the trim above leaves the content flush against the
+   * screen edge.
+   *
+   * Reported from a real Android device, 2026-09-21: no right padding at all.
+   * Desktop Chrome cannot show this — it reserves a classic 15px gutter, so
+   * the trim looks correct there and the bug only exists on the devices the
+   * breakpoint is FOR. `scrollbar-gutter: stable` reserves nothing against an
+   * overlay scrollbar, by spec, so the 15px the rule above is paying for is
+   * simply absent.
+   *
+   * `pointer: coarse` is the proxy — a touch primary input is what ships
+   * overlay scrollbars, and CSS has no way to ask about the scrollbar itself.
+   * A touch laptop would get the untrimmed padding, which is the harmless
+   * direction to be wrong in: 12px of padding beside a 15px gutter, rather
+   * than nothing at all. */
+  @media (pointer: coarse) {
+    .cc-control__page {
+      padding-right: var(--ao-spacing-4);
+    }
+  }
+}
+
+/* Desktop (≥768px): trim the right padding to spacing-4 so the content sits
+   evenly against the reserved scrollbar gutter, which adds width on the right
+   only. Same @media rationale as above — the page can't query its own container. */
+@media (min-width: 768px) {
+  .cc-control__page {
+    padding-right: var(--ao-spacing-4);
+  }
+
+  /* Same overlay-scrollbar correction as the mobile block above — a tablet in
+     landscape has no gutter either, and the trim would leave it 12px on the
+     right against 24 on the left. */
+  @media (pointer: coarse) {
+    .cc-control__page {
+      padding-right: var(--ao-spacing-6);
+    }
+  }
+}
+
+@container cs-page (max-width: 767px) {
+  .cc-control__cards,
+  .cc-control__charts {
+    grid-template-columns: 1fr;
+  }
+  /* Figma mobile order: UpgradeCard stacks ABOVE the two StatCards. */
+  .cc-control__cards .upgrade-card { order: -1; }
+  /* Mobile-only StatCard type sizing (template override — the component keeps
+     16/14 at all sizes). Standard sizes return at >=768px (MD), where this
+     block no longer applies. */
+  .cc-control__cards .stat-card__value { font-size: var(--ao-font-fixed-xs); }   /* 16 -> 14 */
+  .cc-control__cards .stat-card__title { font-size: var(--ao-font-fixed-xxs); }  /* 14 -> 12 */
+  /* Stack the header bar contents (Select keeps its 280px max-width cap). */
+  .cc-control__panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  /* The Analysis Dashboard button now lives inside the card below the charts —
+     pad the card's bottom edge to house it (Figma 4183:14668: card pb-5). */
+  .cc-control__panel {
+    padding-bottom: var(--ao-spacing-5);
+  }
+  /* Mobile chart card: tighter padding + smaller title (Figma 4183:14673). */
+  .cc-control__charts .chart {
+    padding: var(--ao-spacing-4);
+  }
+  .cc-control__charts .chart__big {
+    font-size: var(--ao-font-fixed-sm);
+  }
+  .cc-control__section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  /* Swap which Analysis Dashboard button copy is visible; the mobile copy is
+     centered inside the card, below the charts. */
+  .cc-control__dash-btn--desktop { display: none; }
+  .cc-control__dash-btn--mobile {
+    display: flex;
+    width: fit-content;
+    margin-inline: auto;
+  }
+  /* Whos Online: swap the 4-column Scroll table for the Trigger table. */
+  .cc-control__table--desktop { display: none; }
+  .cc-control__table--mobile { display: block; }
+}
+
+/* ───── Full width — the home page (2026-10-09) ─────
+ *
+ * No Figma frame draws the home in full width. These rules follow the full-width
+ * conventions the designer has set on the other screens: the Listing template
+ * (3788:16762) and its Orders totals strip (2026-10-02), plus page alerts → Style=Fixed.
+ * Every block becomes a flush band: no outer card, no radius, no shadow, a rule
+ * beneath, inline padding spacing-5. The page gap goes so the bands stack; cards
+ * INSIDE a band (the two charts) keep their own card look.
+ * Scoped on `--home`: the generic `--flush` page is shared by every CC screen. */
+.cc-control__page--flush.cc-control__page--home,
+.cc-control__page--flush.cc-control__page--home .cc-control__alert-cards,
+.cc-control__page--flush.cc-control__page--home .cc-control__cards {
+  gap: 0;
+}
+
+/* Card row as a flush strip: a rule between the cells and one beneath. */
+.cc-control__page--flush.cc-control__page--home .cc-control__cards {
+  border-block-end: 1px solid var(--ao-border-secondary);
+}
+
+.cc-control__page--flush.cc-control__page--home .cc-control__cards > .stat-card,
+.cc-control__page--flush.cc-control__page--home .cc-control__cards > .upgrade-card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cc-control__page--flush.cc-control__page--home .cc-control__cards > * + * {
+  border-inline-start: 1px solid var(--ao-border-secondary);
+}
+
+/* Analysis panel as a band; its head row already pads spacing-5 inline. */
+.cc-control__page--flush.cc-control__page--home .cc-control__panel {
+  border: 0;
+  border-block-end: 1px solid var(--ao-datatable-table-border);
+  border-radius: 0;
+}
+
+/* Who's Online: the heading gets the band's inline padding (it had none, so it
+   sat on the page edge), and the table goes flush as on the Listing. */
+.cc-control__page--flush.cc-control__page--home .cc-control__section-head {
+  padding: var(--ao-spacing-5) var(--ao-spacing-5) 0;
+}
+
+.cc-control__page--flush.cc-control__page--home .cc-control__section > .datatables {
+  border: 0;
+  border-block-start: 1px solid var(--ao-datatable-table-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Narrow column: rows pad spacing-3 (the Listing's full-width extrapolation),
+   and the stacked card strip turns its dividers horizontal. */
+@container cs-page (max-width: 767px) {
+  .cc-control__page--flush.cc-control__page--home .cc-control__cards > * + * {
+    border-inline-start: 0;
+  }
+  .cc-control__page--flush.cc-control__page--home .cc-control__cards > * {
+    border-block-start: 1px solid var(--ao-border-secondary);
+  }
+  .cc-control__page--flush.cc-control__page--home .cc-control__cards > .upgrade-card {
+    border-block-start: 0;
+  }
+  .cc-control__page--flush.cc-control__page--home .cc-control__section-head {
+    padding: var(--ao-spacing-4) var(--ao-spacing-3) 0;
+  }
+}
+
+/* ───── Condensed density (2026-10-09) ─────
+ *
+ * `data-cc-density="condensed"` on `.cc-control`, set by control-width.js from the rail's
+ * Minimise button. SPACING ONLY (Mark, 2026-10-09): first one step down the spacing scale, then a
+ * step tighter again the same day ("a little tighter") — so mostly two steps; font sizes, line heights and control heights stay, and so does inline padding,
+ * so band edges keep lining up. No Figma frame yet — a code trial for the designer to judge.
+ *
+ * All in the shell's CSS, because density is a shell mode: Table and Datatables are DS
+ * components also used outside CC. The `.cc-control[...]` prefix also out-specifies the
+ * components' own narrow-width compactions. Anything those already make tighter is guarded so
+ * condensed never makes it looser. */
+
+/* Table rows: 12 → 4 block padding; header 16 → 8. */
+.cc-control[data-cc-density="condensed"] .table tbody td {
+  padding-block: var(--ao-spacing-1);
+}
+
+.cc-control[data-cc-density="condensed"] .table thead th {
+  padding-block: var(--ao-spacing-3);
+}
+
+/* The Orders listing holds a 64px minimum row (Datatables.css), so padding alone does nothing
+   there: condensed steps the minimum to 48 (Mark, 2026-10-09) — a 40px avatar row + 4 × 2 padding,
+   so the rows stay even.
+   Same unnamed container query as Datatables' own `height: auto` below 768, so that still wins. */
+@container (min-width: 768px) {
+  .cc-control[data-cc-density="condensed"] .datatables--orders .table tbody td {
+    height: var(--ao-spacing-9);
+  }
+}
+
+/* Record field rows: 24 → 12 between rows; section body padding 24 → 12. Wide sections only —
+   below 560 of its own container RecordSection already pads spacing-4. */
+@container record-section (min-width: 560px) {
+  .cc-control[data-cc-density="condensed"] .record-section__body {
+    gap: var(--ao-spacing-4);
+    padding: var(--ao-spacing-4);
+  }
+}
+
+/* Panels: 16 → 8. */
+.cc-control[data-cc-density="condensed"] .fact-panel {
+  padding: var(--ao-spacing-3);
+}
+
+.cc-control[data-cc-density="condensed"] .cc-control__charts {
+  gap: var(--ao-spacing-3);
+  padding: var(--ao-spacing-3);
+}
+
+@container cs-page (min-width: 768px) {
+  .cc-control[data-cc-density="condensed"] .cc-control__cards .stat-card,
+  .cc-control[data-cc-density="condensed"] .cc-control__cards .upgrade-card {
+    padding: var(--ao-spacing-3);
+  }
+  /* Full width keeps the strip's inline spacing-5, so the cells line up with the bands. */
+  .cc-control[data-cc-density="condensed"] .cc-control__page--flush .cc-control__cards .stat-card,
+  .cc-control[data-cc-density="condensed"] .cc-control__page--flush .cc-control__cards .upgrade-card {
+    padding-inline: var(--ao-spacing-5);
+  }
+}
+
+/* Page gap between blocks: 32 → 12. Not on a flush page, which runs its own gaps. */
+.cc-control[data-cc-density="condensed"] .cc-control__page:not(.cc-control__page--flush) {
+  gap: var(--ao-spacing-4);
+}
+
+/* Page padding at standard width: 24 → 12. Desktop only — mobile already pads spacing-4, the
+   same value. The right side keeps the house trim against the reserved 15px scrollbar gutter:
+   spacing-0 gives 15 against 12 on the left (exactly the mobile rule), and coarse pointers,
+   which have no gutter, get the full spacing-4. The Listing's sticky offsets read the top padding
+   from --cc-listing-pad-top, so it follows. */
+@media (min-width: 768px) {
+  .cc-control[data-cc-density="condensed"] .cc-control__page:not(.cc-control__page--flush) {
+    padding: var(--ao-spacing-4) var(--ao-spacing-0) var(--ao-spacing-4) var(--ao-spacing-4);
+  }
+  .cc-control[data-cc-density="condensed"] .cc-listing:not([data-listing-template="full"]) {
+    --cc-listing-pad-top: var(--ao-spacing-4);
+  }
+  @media (pointer: coarse) {
+    .cc-control[data-cc-density="condensed"] .cc-control__page:not(.cc-control__page--flush) {
+      padding-right: var(--ao-spacing-4);
+    }
+  }
+}
+
+/* Sidebar menu (Mark, 2026-10-09): rows 40 → 32, item block padding 8 → 4, gaps 4 → 2,
+   submenu rows 4 → 2, submenu list 12 → 8, panel padding 12 → 8 and gap 8 → 6. The brand cell,
+   the search field (a control, kept at control height like the page's inputs) and the icon rail
+   are untouched. Fine pointers only: on touch the menu keeps its standard 40px rows, since 32
+   would fall further below the 44px touch-target guideline. */
+@media (pointer: fine) {
+  .cc-control[data-cc-density="condensed"] .cc-menu:not(.cc-menu--crm) {
+    gap: var(--ao-spacing-2);
+    padding: var(--ao-spacing-3);
+  }
+  .cc-control[data-cc-density="condensed"] .cc-menu__items {
+    gap: var(--ao-spacing-0-5);
+  }
+  .cc-control[data-cc-density="condensed"] .cc-main-menu-item {
+    min-height: var(--ao-spacing-7);
+    padding-block: var(--ao-spacing-1);
+  }
+  .cc-control[data-cc-density="condensed"] .cc-menu__submenu {
+    gap: var(--ao-spacing-0-5);
+    padding-block: var(--ao-spacing-3);
+  }
+  .cc-control[data-cc-density="condensed"] .cc-menu__submenu-item {
+    padding-block: var(--ao-spacing-0-5);
+  }
+}
+
+/* ───── Device-class swap — stays on viewport @media ─────
+ *
+ * The Desktop and Mobile SidebarMenu composites are structurally
+ * different rails (Mobile adds the Ellipsis-toggled extras row), so
+ * swapping them is a device-class decision, not a column-width one.
+ * Even when the desktop column shrinks because its own menu is docked,
+ * we still want the desktop rail. */
+@media (max-width: 767px) {
+  .cc-control__sidebar--desktop { display: none; }
+  .cc-control__sidebar--mobile { display: flex; }
+  /* Right action rail is desktop-only per Figma — hidden on mobile. */
+  .cc-control__actions { display: none; }
+
+  /* Mobile menu = OVERLAY, not push (Figma mobile Menu Open 4187:21247).
+   * The docked panel's default behaviour is an in-flow flex sibling of the
+   * rail (correct on desktop — it widens the shell and pushes main aside).
+   * On mobile the panel must float OVER .cc-control__main instead: lift
+   * it out of flow and anchor it to the rail's right edge (left: 100% of the
+   * now rail-width .cc-sidebar-menu). The rail stays in flow at the left;
+   * main content fills the full remaining width beneath the panel. */
+  .cc-control__sidebar--mobile .cc-menu:not(.cc-menu--floating) {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    height: 100%;
+    z-index: 5;
+  }
+}

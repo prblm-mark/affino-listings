@@ -1,0 +1,91 @@
+/* MediaMeta — the view-mode value of an image field: thumbnail, alt text as its caption, and
+ * an "Image details" button that opens the file facts (alt text, file name, size, dimensions)
+ * in a DS Dropdown panel. Details hidden by default — layout B, the Google Drive / Photos
+ * "details" pattern, chosen by the designer 2026-09-29 over an always-visible asset card and an
+ * inline Show/Hide toggle. MediaPicker is the edit-mode counterpart.
+ *
+ * Composes: Button (Secondary xs + info icon) and Dropdown (trigger + panel; Dropdown.js owns
+ * open, outside-click and Escape).
+ *
+ * Figma: Lus07xi8pPXLN87sQIyrEt · View & Edit page · set 3905:140931 (State=Collapsed/Expanded)
+ */
+
+/* Positioning context for the panel: it anchors to the whole block, not to the button, so
+ * `max-inline-size: 100%` caps it at the value column and it never runs off a phone. The row
+ * layout holds at every width — no narrow variant needed. */
+.media-meta {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ao-spacing-4);
+  min-width: 0;
+}
+
+.media-meta__thumb {
+  flex-shrink: 0;
+  width: var(--ao-spacing-12);
+  height: var(--ao-spacing-12);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-sm);
+  background-color: var(--ao-surface-minimal);
+  object-fit: cover;
+}
+
+.media-meta__summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ao-spacing-3);
+  min-width: 0;
+}
+
+/* Alt text as the caption, two lines at most — the full value is in the panel. */
+.media-meta__caption {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-secondary);
+}
+
+.media-meta__info {
+  position: static;   /* Dropdown's own `relative` would anchor the panel to the button */
+}
+
+.media-meta__panel {
+  min-width: 0;
+  inline-size: max-content;
+  max-inline-size: 100%;
+}
+
+.media-meta__list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--ao-spacing-4);
+  row-gap: var(--ao-spacing-0-5);
+  min-width: 0;
+  margin: 0;
+}
+
+.media-meta__term,
+.media-meta__value {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+}
+
+.media-meta__term {
+  color: var(--ao-text-contrast);
+  white-space: nowrap;
+}
+
+.media-meta__value {
+  color: var(--ao-text-primary);
+  overflow-wrap: anywhere;
+}

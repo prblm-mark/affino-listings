@@ -1,0 +1,207 @@
+/* CCTopNavigation — dark utility bar above the main Header.
+ * Figma: ETKqleZdpertwFEo40YB5n (CC Hybrid). Component set 4099:3634.
+ *
+ * Two Type axes:
+ *   - Default:   "Zone name > Level 1"
+ *   - Multizone: "Zone Selector ▾ > Level 1 > Level 2" (with Dropdown)
+ * Device responsiveness via `@container (max-width: 767px)` against this
+ * component's own inline-size (it declares container-type below): mobile
+ * hides the user name and chevron, leaving only the portrait. The comment
+ * said `@media` long after the code stopped using it — corrected 2026-09-17.
+ */
+
+.cc-top-navigation {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-5);
+  width: 100%;
+  min-height: var(--ao-spacing-9);
+  padding: 0 var(--ao-spacing-5);
+  background-color: var(--cc-header-primary-bg);
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+/* ── Breadcrumb (flex-1, fills space) ────────────────── */
+
+.cc-top-navigation .breadcrumb {
+  flex: 1 0 0;
+  min-width: 0;
+  display: block;
+}
+
+/* Contextual override — Breadcrumb is dark-bg here (Case B per CLAUDE.md).
+ * Existing Breadcrumb uses --ao-text-secondary/primary; flip to invert tokens. */
+.cc-top-navigation .breadcrumb__link,
+.cc-top-navigation .breadcrumb__dropdown {
+  color: var(--ao-text-invert-secondary);
+}
+
+.cc-top-navigation .breadcrumb__link:hover,
+.cc-top-navigation .breadcrumb__dropdown:hover {
+  color: var(--ao-text-invert);
+}
+
+/* The crumb `<li>` is the ellipsis container, so the "…" takes the `<li>`'s colour — not the
+ * link's. Without this it inherited the default dark text and a truncated link crumb looked
+ * clipped flush on the dark bar (measured 2026-09-30: overflow + ellipsis set, nothing visible). */
+.cc-top-navigation .breadcrumb__item {
+  color: var(--ao-text-invert-secondary);
+}
+
+.cc-top-navigation .breadcrumb__item--current {
+  color: var(--ao-text-invert);
+}
+
+.cc-top-navigation .breadcrumb__separator {
+  color: var(--ao-icon-invert-secondary);
+}
+
+/* Zone Selector dropdown panel uses the narrower --ao-size-2 (160px) instead
+ * of the Dropdown component's default --ao-size-4. Per Figma spec — the zone
+ * list is short labels so the wider default looks oversized. */
+.cc-top-navigation .breadcrumb .dropdown__panel {
+  min-width: var(--ao-size-2);
+}
+
+/* ── Right-hand actions cluster ──────────────────────── */
+
+.cc-top-navigation__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-5);
+  flex-shrink: 0;
+}
+
+/* ── User block (portrait + name + chevron) ──────────── */
+
+.cc-top-navigation__user {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.cc-top-navigation__user .portrait {
+  width: var(--ao-spacing-6);
+  height: var(--ao-spacing-6);
+  flex-shrink: 0;
+  border-radius: var(--ao-radius-full);
+  object-fit: cover;
+}
+
+.cc-top-navigation__user-name {
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-invert-secondary);
+  letter-spacing: 0.28px; /* optical tracking from Figma — letter-spacing is a documented px exception */
+  font-feature-settings: 'salt' 1;
+  white-space: nowrap;
+}
+
+.cc-top-navigation__user-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ao-icon-size-lg);
+  height: var(--ao-icon-size-lg);
+  color: var(--ao-icon-invert-secondary);
+}
+
+.cc-top-navigation__user-chevron [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+/* ── Preview button (monitor icon) ───────────────────── */
+
+.cc-top-navigation__preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--cc-header-icon);
+  cursor: pointer;
+  transition: color var(--ao-transition-default);
+}
+
+.cc-top-navigation__preview:hover {
+  color: var(--ao-text-invert);
+}
+
+.cc-top-navigation__preview [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+/* ── Mobile (≤767px container width) ─────────────────────
+ *
+ * Container-query based so the bar collapses to compact mobile dress
+ * whenever the bar itself is narrower than 768px — even on a wide
+ * viewport where it sits next to a docked sidebar. */
+
+@container (max-width: 767px) {
+  .cc-top-navigation {
+    /* 48px, up from Figma's 40. Designer, 2026-09-21: the two stacked bars
+       take the SAME height on a phone, and the Header comes down to 48 to
+       meet this one. Figma's mobile variants (4099:3630 / 4099:3632) still
+       say 40 — an instruction that overrides them, not a reading of them, so
+       Figma wants updating rather than this line "fixing" back. */
+    min-height: var(--ao-spacing-9); /* 48px on mobile */
+    /* 12px, from the mobile variants (4099:3630 / 4099:3632), where the Breadcrumb child sits at
+     * x=12 with 12px clear on the right. Desktop keeps --ao-spacing-5 (16px), measured the same
+     * way on 4099:3633 (Breadcrumb at x=16). This was missing until 2026-08-28 — mobile kept the
+     * desktop 16px because the block only ever overrode min-height. */
+    padding: 0 var(--ao-spacing-4);
+  }
+
+  /* Mobile steps the crumb type down 14px -> 13px (designer, 2026-08-28; Figma's mobile variants
+   * bind 13px where desktop binds 14px).
+   *
+   * On `.breadcrumb__item`, because that is where Breadcrumb.css sets the size — `__link` and
+   * `__dropdown` both declare `font-size: inherit`, so setting it on the list or the nav would
+   * do nothing. Two classes beats Breadcrumb's own one-class rule, so no !important is needed.
+   *
+   * NOTE ON THE TOKEN NAME: 13px is `--ao-font-fixed-2xs` in this codebase. The CC Hybrid Figma
+   * file still binds 13px to a variable it calls `--ao-font-fixed-xxs` — that file's typography
+   * variables predate the 28 Aug 2026 swap, under which `xxs` became 12px and `2xs` became 13px
+   * in the Affino AI file and in `css/tokens.css`. The PIXEL VALUE is what agrees here, not the
+   * name. Copying the name straight out of the CC Hybrid file would silently give 12px. */
+  .cc-top-navigation .breadcrumb__item {
+    font-size: var(--ao-font-fixed-2xs); /* 13px */
+  }
+
+  .cc-top-navigation__user-name,
+  .cc-top-navigation__user-chevron {
+    display: none;
+  }
+
+  /* Breadcrumb collapses to max 2 items below the MD (768px) breakpoint.
+   * Multizone shows "Zone Selector > Level 1" (Figma mobile variant
+   * 4099:3630): the trailing crumb(s) + their separators carry `--collapse`
+   * and hide here, leaving zone selector + 1 level (or 2 levels when there
+   * is no zone selector). At >=768px all three items show. */
+  .cc-top-navigation .breadcrumb__item--collapse,
+  .cc-top-navigation .breadcrumb__separator--collapse {
+    display: none;
+  }
+
+  /* The crumb that becomes the last visible one (immediately before the
+   * collapsed separator) takes the current-page colour, so the collapsed
+   * breadcrumb reads "Zone Selector > Level 1" with Level 1 active — matching
+   * the Figma mobile variant (4099:3630). */
+  .cc-top-navigation .breadcrumb__item:has(+ .breadcrumb__separator--collapse),
+  .cc-top-navigation .breadcrumb__item:has(+ .breadcrumb__separator--collapse) .breadcrumb__link {
+    color: var(--ao-text-invert);   /* the <li> too, so its ellipsis matches the active crumb */
+  }
+}

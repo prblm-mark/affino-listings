@@ -1,0 +1,889 @@
+/* RecordScreen — CC record screens: Article View, Article Edit, Article Steps.
+ * Shell = the ControlScreen/ListingScreen app shell; this file only lays out the page body.
+ *
+ * Figma: Lus07xi8pPXLN87sQIyrEt · View & Edit page (3842:146669)
+ *   View 3842:147640 (standard) / 3842:152666 (full) · Edit 3842:147155 / 3842:146670
+ *   Steps 3842:150779, 3852:65392, 3842:148092 (standard) / 3842:154798, 3842:153114 (full)
+ *
+ * Shell paint table (Step 3a, read from the frames 2026-09-28):
+ *   Standard  page bg        → shell --cc-ui-primary-bg (screen frame #E7EDF0; body fill hidden)
+ *             page padding   → the Listing screen's (spacing-6 / spacing-4 <768) — designer override
+ *                              2026-09-29 of Figma's spacing-5/5/6; tabs → content gap spacing-5
+ *             columns        → gap spacing-5; sidebar max-width --ao-size-7 (384)
+ *             main / sidebar → gap spacing-5 / gap spacing-5
+ *   Full      page           → flush (ccWidth), --ao-surface-primary
+ *             columns        → gap 0; main column right border --ao-border-secondary
+ *             sidebar        → padding spacing-5, gap spacing-5, max-width --ao-size-7
+ * Width is the shell's one switch (control-width.js); RecordScreen.js puts the matching
+ * --full modifier on RecordTabs / RecordSection / StepsTable.
+ */
+
+/* Page padding = the Listing screen's, at every width (designer, 2026-09-29 — "we need
+ * consistency"). The record page no longer zeroes `.cc-control__page`'s padding, so it gets
+ * exactly what `.cc-control__page--listing` gets from ControlScreen.css: `--ao-spacing-6` on
+ * desktop and `--ao-spacing-4` below 768, with the same right-edge scrollbar-gutter trims and
+ * their overlay-scrollbar corrections. `.record-screen` itself carries no padding any more
+ * (it was 16 / 16 / 24). Full width stays flush via `.cc-control__page--flush` (ccWidth). */
+.cc-control__page--record {
+  gap: 0;
+}
+
+.record-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-5);
+  min-width: 0;
+}
+
+.record-screen__body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ao-spacing-5);
+  min-width: 0;
+}
+
+.record-screen__main {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--ao-spacing-5);
+  min-width: 0;
+}
+
+/* Width is resizable (designer, 2026-09-28 — "like the seating planner"): RecordScreen.js
+ * writes --rs-sidebar-w on the body from the drag handle; unset, Figma's 384 stands.
+ * 384 is also the floor, so the handle only widens it. */
+.record-screen__sidebar {
+  position: relative;               /* positioning context for the resize strip */
+  display: flex;
+  flex: 0 1 var(--rs-sidebar-w, var(--ao-size-7));
+  flex-direction: column;
+  gap: var(--ao-spacing-5);
+  min-width: var(--ao-size-7);      /* never narrower than Figma's 384 (designer, 2026-09-28) */
+  max-width: var(--rs-sidebar-w, var(--ao-size-7));
+}
+
+/* ── Resize handle ────────────────────────────────────
+ * The Seating Planner's model (2026-09-10): no visible pill, a transparent strip on the
+ * sidebar's leading edge with a col-resize cursor. Standard width: the strip fills the
+ * spacing-5 gap between the columns. Full width: it straddles the main column's right border,
+ * which tints on hover/drag the way the seating sheets' edge does. Still a real element so it
+ * can take focus — role="separator", arrow keys, Home/End, double-click resets to 384. */
+.record-screen__handle {
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  inset-inline-start: calc(0px - var(--ao-spacing-5));
+  inline-size: var(--ao-spacing-5);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+[data-cc-width="full"] .record-screen__handle {
+  inset-inline-start: calc(0px - var(--ao-spacing-5) / 2);
+}
+
+.record-screen__body:has(.record-screen__handle:hover) .record-screen__main,
+.record-screen__body:has(.record-screen__handle[data-dragging]) .record-screen__main {
+  border-right-color: var(--ao-surface-contrast);
+}
+
+/* While dragging, stop text selection across the page. */
+.record-screen__body:has(.record-screen__handle[data-dragging]) {
+  user-select: none;
+}
+
+.record-screen__handle-bar {
+  display: none;
+}
+
+.record-screen__handle:focus-visible {
+  outline: none;
+}
+
+/* Invisible at rest, so keyboard focus needs its own mark — same as the Seating Planner. */
+.record-screen__handle:focus-visible .record-screen__handle-bar {
+  display: block;
+  inline-size: var(--ao-spacing-1);
+  block-size: 100%;
+  margin-inline: auto;
+  border-radius: var(--ao-radius-full);
+  background-color: var(--ao-border-brand);
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: 2px;
+}
+
+/* ── Top-level cards: border/card + shadow/2xs (designer, 2026-10-02) ──
+ * The same treatment as the listing cards: RecordTabs, every RecordSection and
+ * the sidebar FactPanels. Nested cards inside them (StatCards, the chart, form
+ * controls, PromptModifier) are left as they are.
+ * Standard width only for the tabs and sections, because full width redraws
+ * them as flush rules (their own CSS), and `:not(full)` keeps this from
+ * recolouring those rules. The FactPanels stay cards in full width, so they keep
+ * border/card there but lose the shadow, the listings' full-width rule. */
+.cc-control:not([data-cc-width="full"]) .record-screen .record-tabs,
+.cc-control:not([data-cc-width="full"]) .record-screen .record-section,
+.record-screen .fact-panel {
+  border-color: var(--ao-border-card);
+  box-shadow: var(--ao-shadow-2xs);
+}
+
+[data-cc-width="full"] .record-screen .fact-panel {
+  box-shadow: none;
+}
+
+/* The section header's divider matches its card's edge (designer, 2026-10-02).
+ * Standard width only, as above: in full width the sections are flush strips
+ * ruled in border/secondary, and the header divider stays in step with those. */
+.cc-control:not([data-cc-width="full"]) .record-screen .record-section__header {
+  border-bottom-color: var(--ao-border-card);
+}
+
+/* ── Full width ───────────────────────────────────── */
+
+[data-cc-width="full"] .record-screen {
+  gap: 0;
+  padding: 0;
+  background-color: var(--ao-surface-primary);
+}
+
+[data-cc-width="full"] .record-screen__body {
+  align-items: stretch;
+  gap: 0;
+}
+
+[data-cc-width="full"] .record-screen__main {
+  gap: 0;
+  border-right: 1px solid var(--ao-border-secondary);
+}
+
+[data-cc-width="full"] .record-screen__sidebar {
+  padding: var(--ao-spacing-5);
+}
+
+/* One line under the header, not two. The RecordHeader draws its own bottom
+ * border (Figma 3867:2138), and the shell chrome draws another 1px below it in
+ * standard width — control-width.js only adds `--flush` in full width, so the
+ * standard screens showed a double rule (designer, 2026-09-28). The record
+ * header's border is the one Figma specifies, so the chrome's is dropped here. */
+.cc-control__chrome:has(.cc-header--record) {
+  border-bottom: 0;
+}
+
+/* ── Narrow: stack the columns ─────────────────────────
+ * Designer-approved 2026-09-28. `cs-page` is the page's content box, so this fires on a
+ * docked menu or a narrow window alike (CLAUDE.md §4a) — 1023, the Seating Planner's
+ * stack point. Side by side needs 384 sidebar + 16 gap + ~600 of form ≈ 1000–1040.
+ * Stacked, the sidebar panels go BELOW the main content (DOM and reading order), one
+ * full-width column. The resize handle is removed:
+ * a stacked panel has no edge to drag, and the stored width is ignored (max-width none). */
+@container cs-page (max-width: 1023px) {
+  .record-screen__body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .record-screen__main {
+    flex: none;
+  }
+
+  /* ONE column (designer, 2026-09-28). A two-up grid left big holes beside short panels
+   * (Record next to Performance); a masonry column flow would close them but panels would
+   * jump columns whenever SEO Health or a viewer list expands. The sidebar's own flex
+   * column + spacing-5 gap stays; it just takes the full width. */
+  .record-screen__sidebar {
+    flex: none;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .record-screen__handle {
+    display: none;
+  }
+
+  /* Full width: the main column's divider moves from its right edge to under it. */
+  [data-cc-width="full"] .record-screen__main {
+    border-right: 0;
+    border-bottom: 1px solid var(--ao-border-secondary);
+  }
+}
+
+/* ── Sidebar off ("Show sidebar" switch, designer 2026-09-29) ──────────────
+ * View opens with it on, Edit with it off (the class is in the generated markup, so there is no
+ * flash). Only while side by side — at ≤1023 the sidebar stacks under the content and always shows. */
+/* Mobile (designer amend, 2026-09-30): tabs → content, and section to section, tighten from
+ * spacing-5 to spacing-4. */
+@container cs-page (max-width: 767px) {
+  .record-screen {
+    gap: var(--ao-spacing-4);
+  }
+}
+
+@container cs-page (min-width: 1024px) {
+  .record-screen--no-sidebar .record-screen__sidebar {
+    display: none;
+  }
+
+  [data-cc-width="full"] .record-screen--no-sidebar .record-screen__main {
+    border-right: 0;
+  }
+}
+
+/* Sidebar value chips (FactPanel values, Recent Viewers' companies) — `btn btn--tertiary` plus the
+ * subtle `--ao-border-secondary` line the listing's account chip and the Steps author chip carry
+ * (Case B contextual override, designer 2026-09-29). Restated for hover and focus because
+ * `.btn--tertiary:hover` sets the transparent hover border at (0,2,0). */
+.record-screen__sidebar .btn--tertiary,
+.record-screen__sidebar .btn--tertiary:hover,
+.record-screen__sidebar .btn--tertiary:focus-visible {
+  border-color: var(--ao-border-secondary);
+}
+
+/* ── Sidebar analytics tables (code-first, 2026-10-05) ──
+ * Referring URLs / Link Clicks put a URL beside a count in a 384px panel. A long URL would set the
+ * table's min-content and push the count out of the panel, so the URL cell yields: zero max width
+ * plus full inline size makes it take only the space left after the count, then ellipsis. The full
+ * URL is in the cell's title. */
+.record-screen__cell-truncate {
+  max-inline-size: 0;
+  inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Duplicates check dialog (code-first, 2026-10-05; Hub TASK-531782 Q3) ──
+ * The likely matches as a bordered list: the title links to the existing article, section and
+ * date sit under it in the quiet 12px meta treatment. */
+.record-duplicates {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+}
+
+.record-duplicates__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-0-5);
+  padding: var(--ao-spacing-3) var(--ao-spacing-4);
+  border-bottom: 1px solid var(--ao-border-secondary);
+}
+
+.record-duplicates__item:last-child {
+  border-bottom: 0;
+}
+
+.record-duplicates__meta {
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-contrast);
+}
+
+/* The failed-Save summary takes focus on load (tabindex="-1") so it is announced first. It is not
+ * interactive, so it needs no focus ring — its links keep theirs. */
+.record-screen [data-validation-summary]:focus {
+  outline: none;
+}
+
+/* Full width: page Alerts become Style=Fixed (RecordScreen.js FULL map), but Fixed's 3px TOP bar
+ * sits right under the RecordTabs' active underline and the two clash. Case B contextual override
+ * (designer, 2026-10-05): on this screen the bar moves to the bottom edge and is 2px, not 3px; the
+ * Alert component keeps Figma's 3px top bar everywhere else. Colours are Fixed's own per-type border tokens. */
+[data-cc-width="full"] .record-screen__main > .alert--fixed {
+  border-top: 0;
+  border-bottom: 2px solid var(--ao-border-info);
+}
+
+[data-cc-width="full"] .record-screen__main > .alert--fixed.alert--success { border-bottom-color: var(--ao-border-success); }
+[data-cc-width="full"] .record-screen__main > .alert--fixed.alert--danger { border-bottom-color: var(--ao-border-error); }
+[data-cc-width="full"] .record-screen__main > .alert--fixed.alert--warning { border-bottom-color: var(--ao-border-warning); }
+[data-cc-width="full"] .record-screen__main > .alert--fixed.alert--neutral { border-bottom-color: var(--ao-border-neutral); }
+
+/* ── Contact View (code-first, 2026-10-07) ─────────────────────────────
+   RecordList: the sidebar's timeline / tasks / notes / opportunities rows (record_markup.record_list).
+   Type and spacing are ViewerItem's (title 2xs medium in text ink, meta xxs in contrast ink, 2px
+   between them) and rows are divided by the card's own border, so nothing new is introduced. */
+.record-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.record-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  padding-block: var(--ao-spacing-3);
+  border-block-end: 1px solid var(--ao-border-secondary);
+}
+
+.record-list__item:first-child {
+  padding-block-start: 0;
+}
+
+.record-list__item:last-child {
+  padding-block-end: 0;
+  border-block-end: 0;
+}
+
+.record-list__main {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--ao-spacing-0-5);
+  min-inline-size: 0;
+}
+
+.record-list__title,
+.record-list__meta,
+.record-list__more {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  line-height: var(--ao-leading-xs);
+}
+
+.record-list__title {
+  font-size: var(--ao-font-fixed-2xs);
+  font-weight: var(--ao-font-medium);
+  color: var(--ao-text-primary);
+}
+
+.record-list__meta,
+.record-list__more {
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-contrast);
+}
+
+.record-list__item > .badge {
+  flex-shrink: 0;
+}
+
+/* The contact's photo in the Contact section's Photo row: Avatar Size=4 (64px). */
+.contact-view__photo {
+  display: inline-flex;
+}
+
+/* Customer signals sit as one AvatarGroup row; the group wraps on a narrow sidebar. */
+.contact-view__signals .avatar-group {
+  flex-wrap: wrap;
+  row-gap: var(--ao-spacing-2);
+}
+
+/* A summary fact list above a record list (Opportunities): a divider and the panel's own row gap
+   between them, so the totals do not run into the first row. */
+.fact-list + .record-list {
+  margin-block-start: var(--ao-spacing-3);
+  border-block-start: 1px solid var(--ao-border-secondary);
+}
+
+.fact-list + .record-list > .record-list__item:first-child {
+  padding-block-start: var(--ao-spacing-3);
+}
+
+/* ── Contact tabs: Communication / Commerce (2026-10-07) ──────────────
+   A Datatables card per table, stacked with the record screen's own block gap. The title is the
+   RecordSection title's type; the count beside it is its contrast ink. */
+.contact-tab-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-5);
+}
+
+.contact-tab__head {
+  justify-content: space-between;
+}
+
+/* At least the height of the Add button (Button sm, 32px), so a table head with no button is as
+   tall as one with (Open / Closed opportunities stacked one above the other, designer 2026-10-07). */
+.contact-tab__title {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  min-block-size: var(--ao-spacing-7);
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-md);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+}
+
+.contact-tab .table tbody td {
+  height: auto;
+}
+
+.contact-tab .table td:first-child {
+  white-space: normal;
+}
+
+.contact-tab__summary {
+  margin: var(--ao-spacing-0-5) 0 0;
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-contrast);
+}
+
+.contact-tab__num {
+  font-variant-numeric: tabular-nums;
+}
+
+.contact-tab__empty {
+  margin: 0;
+  padding: var(--ao-spacing-5);
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-contrast);
+}
+
+.contact-tab__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ao-spacing-3);
+  padding: var(--ao-spacing-3) var(--ao-spacing-5);
+  border-block-start: 1px solid var(--ao-datatable-table-border);
+}
+
+.contact-tab__count {
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-contrast);
+}
+
+/* A count chip after a panel title sits on the title's line, centred with it. */
+.record-screen .fact-panel__title:has(.badge) {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+}
+
+/* Narrow: the table head's Add button keeps its + and drops the word (its aria-label still says it),
+   as the CC header and RecordTabs buttons do, so it stays on the title's line and every head is
+   the same height. */
+@container cs-page (max-width: 767px) {
+  .contact-tab__btn-label {
+    display: none;
+  }
+}
+
+/* Tab cards side by side where there is room: two 512px-plus columns (`size-9`), one when narrow.
+   `min(100%, …)` so a single column never overflows a phone. */
+.contact-tab-grid {
+  display: grid;
+  /* auto-fit, not auto-fill (Mark, 2026-10-09): every grid holds a PAIR of cards, and auto-fill kept
+     an empty third track at wide widths, leaving a gap. auto-fit collapses it — two cards share the row,
+     and still stack once the column is narrower than two cards. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--ao-size-9)), 1fr));
+  gap: var(--ao-spacing-5);
+  /* Cards in a row match in height (designer, 2026-10-07): each stretches to the tallest. */
+  align-items: stretch;
+}
+
+/* A card whose body is not a table (facts, a timeline, stats, viewers): the toolbar's own inset. */
+.contact-tab__body {
+  padding: var(--ao-spacing-5);
+}
+
+.contact-tab__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--ao-size-3)), 1fr));
+  gap: var(--ao-spacing-4);
+}
+
+.contact-tab__foot--links {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+/* ── Contact Analysis: tiles, charts, ranked signals (2026-10-07) ─────── */
+.contact-tab__tiles {
+  display: grid;
+  /* auto-fit, not auto-fill: four tiles share the row rather than leaving empty tracks after them. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--ao-size-3)), 1fr));
+  gap: var(--ao-spacing-5);
+}
+
+.contact-chart {
+  position: relative;
+  block-size: var(--ao-size-4);   /* 240px — the CRM / dashboard half-width chart height */
+}
+
+/* The chart's values for screen readers and anyone who wants the numbers (Live Dashboard's
+   "View as table" treatment). */
+.contact-chart__table {
+  margin-block-start: var(--ao-spacing-4);
+}
+
+.contact-chart__table summary {
+  inline-size: fit-content;
+  cursor: pointer;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-semibold);
+  color: var(--ao-text-secondary);
+}
+
+.contact-chart__table summary:hover {
+  color: var(--ao-text-primary);
+}
+
+.contact-chart__table .table {
+  margin-block-start: var(--ao-spacing-3);
+}
+
+/* Ranked customer signals: icon, name, count, and a share-of-top bar (Live Dashboard's
+   leaderboard: an 8px track in surface-contrast, the fill in the charts' lagoon). */
+.signal-rank {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signal-rank__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+}
+
+.signal-rank__main {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--ao-spacing-2);
+  min-inline-size: 0;
+}
+
+.signal-rank__line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ao-spacing-3);
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-2xs);
+  line-height: var(--ao-leading-xs);
+}
+
+.signal-rank__name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--ao-font-medium);
+  color: var(--ao-text-primary);
+}
+
+.signal-rank__count {
+  flex-shrink: 0;
+  font-weight: var(--ao-font-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--ao-text-primary);
+}
+
+.signal-rank__bar {
+  display: flex;
+  inline-size: 100%;
+  block-size: var(--ao-spacing-2);
+  border-radius: var(--ao-radius-full);
+  background-color: var(--ao-surface-contrast);
+  overflow: hidden;
+}
+
+.signal-rank__fill {
+  inline-size: var(--signal-share, 0%);
+  block-size: 100%;
+  border-radius: var(--ao-radius-full);
+  background-color: var(--ao-accent-lagoon-solid);
+}
+
+/* A timeline row's signal icon: the Customer signals group's circle (Avatar Placeholder Size=2),
+   its glyph at size-sm as in the group. */
+.record-list__icon {
+  flex-shrink: 0;
+}
+
+.record-list__icon svg {
+  inline-size: var(--ao-icon-size-sm);
+  block-size: var(--ao-icon-size-sm);
+}
+
+/* ── Trail layout: Latest activity as a timeline (Flowbite Timeline, designer 2026-10-07) ──
+   The house timeline pattern (VersionHistory): a 1px line in border-secondary runs behind the icon
+   circles, centred on them, from the first icon to the last; rows have no dividers, the time sits
+   above the event in contrast ink. */
+.record-list--timeline {
+  position: relative;
+  gap: var(--ao-spacing-5);
+}
+
+.record-list--timeline::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--ao-spacing-4);                          /* from the first circle's centre … */
+  inset-inline-start: calc(var(--ao-spacing-7) / 2);         /* … centred on the 32px circles */
+  inline-size: 1px;                                          /* a 1px rule is an optical width */
+  background-color: var(--ao-border-secondary);
+}
+
+.record-list--timeline .record-list__item {
+  align-items: flex-start;
+  padding-block: 0;
+  border-block-end: 0;
+}
+
+/* The circle paints over the line, so the line reads as a trail between events. */
+.record-list--timeline .record-list__icon {
+  position: relative;
+  background-color: var(--ao-surface-secondary);
+  box-shadow: 0 0 0 4px var(--ring-surface, var(--ao-surface-primary));   /* the card's own colour (AvatarGroup.js) */
+}
+
+.record-list--timeline .record-list__main {
+  padding-block-start: var(--ao-spacing-1);
+}
+
+.record-list--timeline + .record-list__more {
+  margin-block-start: var(--ao-spacing-4);
+  padding-inline-start: calc(var(--ao-spacing-7) + var(--ao-spacing-3));
+}
+
+/* ── Permissions (2026-10-07, designer) ─────────────────────────────────
+   Yes / no preferences as read-only switches with their state in words; older terms muted. */
+.contact-pref {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+}
+
+.contact-pref .toggle {
+  cursor: default;
+}
+
+.contact-pref__state {
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-contrast);
+}
+
+.contact-tab__muted {
+  color: var(--ao-text-contrast);
+}
+
+/* Signal icon colours (demo only): the StatCard soft scheme per signal, until real badge images
+   replace the glyphs (record_markup.signal_hue). `.record-screen` + `.avatar` out-specify Avatar
+   Placeholder's grey and the timeline circle's surface fill. */
+.record-screen .avatar.signal-icon--lagoon { background-color: var(--ao-accent-lagoon-soft); color: var(--ao-accent-lagoon-soft-fg); }
+.record-screen .avatar.signal-icon--jade { background-color: var(--ao-accent-jade-soft); color: var(--ao-accent-jade-soft-fg); }
+.record-screen .avatar.signal-icon--violet-radix { background-color: var(--ao-accent-violet-radix-soft); color: var(--ao-accent-violet-radix-soft-fg); }
+.record-screen .avatar.signal-icon--orange { background-color: var(--ao-accent-orange-soft); color: var(--ao-accent-orange-soft-fg); }
+.record-screen .avatar.signal-icon--pink { background-color: var(--ao-accent-pink-soft); color: var(--ao-accent-pink-soft-fg); }
+.record-screen .avatar.signal-icon--purple { background-color: var(--ao-accent-purple-soft); color: var(--ao-accent-purple-soft-fg); }
+.record-screen .avatar.signal-icon--emerald { background-color: var(--ao-accent-emerald-soft); color: var(--ao-accent-emerald-soft-fg); }
+.record-screen .avatar.signal-icon--indigo { background-color: var(--ao-accent-indigo-soft); color: var(--ao-accent-indigo-soft-fg); }
+.record-screen .avatar.signal-icon--bright-teal { background-color: var(--ao-accent-bright-teal-soft); color: var(--ao-accent-bright-teal-soft-fg); }
+.record-screen .avatar.signal-icon--lime-radix { background-color: var(--ao-accent-lime-radix-soft); color: var(--ao-accent-lime-radix-soft-fg); }
+.record-screen .avatar.signal-icon--orange-radix { background-color: var(--ao-accent-orange-radix-soft); color: var(--ao-accent-orange-radix-soft-fg); }
+.record-screen .avatar.signal-icon--teal-radix { background-color: var(--ao-accent-teal-radix-soft); color: var(--ao-accent-teal-radix-soft-fg); }
+.record-screen .avatar.signal-icon--mid-blue { background-color: var(--ao-accent-mid-blue-soft); color: var(--ao-accent-mid-blue-soft-fg); }
+.record-screen .avatar.signal-icon--blue { background-color: var(--ao-accent-blue-soft); color: var(--ao-accent-blue-soft-fg); }
+
+/* ── Order View (code-first, 2026-10-07) ──────────────────────────────
+   The order's line items and payment rows are Datatables cards in the main column, between its
+   RecordSections. The attendee block and the totals sit inside the Line items card. */
+.order-attendees {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+  padding: var(--ao-spacing-4) var(--ao-spacing-5);
+  border-block-start: 1px solid var(--ao-datatable-table-border);
+}
+
+.order-attendees__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ao-spacing-3);
+}
+
+.order-attendees__title {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+}
+
+.order-attendees__empty {
+  margin: 0;
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-contrast);
+}
+
+/* The attendee table sits inset in the card body, so it carries its own border and corners. */
+.order-attendees__table .datatables__body {
+  border: 1px solid var(--ao-datatable-table-border);
+  border-radius: var(--ao-radius-md);
+  overflow: hidden;
+}
+
+/* Totals: a right-aligned summary under the lines, the Total row in the title's weight. */
+.order-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--ao-spacing-1);
+  margin: 0;
+  /* No rule above: the Attendees block already closes off the lines, and the Total row carries its own. */
+  padding: 0 var(--ao-spacing-5) var(--ao-spacing-4);
+}
+
+.order-totals__row {
+  display: grid;
+  grid-template-columns: var(--ao-size-1) var(--ao-size-1);
+  gap: var(--ao-spacing-4);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-secondary);
+}
+
+.order-totals__row dt { text-align: start; }
+.order-totals__row dd { margin: 0; text-align: end; }
+
+.order-totals__row--total {
+  margin-block-start: var(--ao-spacing-1);
+  padding-block-start: var(--ao-spacing-2);
+  border-block-start: 1px solid var(--ao-border-secondary);
+  font-weight: var(--ao-font-semibold);
+  color: var(--ao-text-primary);
+}
+
+.order-address {
+  font-style: normal;
+}
+
+/* Sidebar Status panel: the status badge with its Change link, above the order facts. */
+.order-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ao-spacing-3);
+  padding-block-end: var(--ao-spacing-3);
+}
+
+/* Processing modals: stacked fields; two short fields share a row where there is room. */
+.order-modal__pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--ao-size-5)), 1fr));
+  gap: var(--ao-spacing-4);
+}
+
+.order-modal__prefill {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.order-modal__form .textarea__control {
+  resize: vertical;
+}
+
+/* A history line can carry an email or an AWB number: let it break rather than run off the panel. */
+[data-order-history] .record-list__title {
+  overflow-wrap: anywhere;
+}
+
+/* Full width: the order's table cards go flush like RecordSection--full (a bottom rule only, square),
+   so they don't add a second top border or side borders between the flush sections. */
+.order-card.order-card--full {
+  border-width: 0 0 1px;
+  border-radius: var(--ao-radius-none);
+}
+
+/* ══ Order Edit (code-first, 2026-10-09) — no Figma frame ═════════════════════════════════════════
+ * The live order form on the kit (record_order.edit_sections). Everything here reuses the record
+ * section's own rhythm: spacing-6 between rows and columns (the section body's gap), spacing-3
+ * between a control and its companions (the edit rows' rule). */
+
+/* Read-only rows in edit (Order No., Customer, End User): the value as text. */
+.field-row__static {
+  margin: 0;
+}
+
+/* Editable grid (record_markup.edit_grid): title, editable table, Add row / Delete selected, help
+   line — Order Payment / Refund Details, Account subscriptions and event credits. */
+.edit-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+  min-inline-size: 0;
+}
+
+.edit-grid[hidden] {
+  display: none;
+}
+
+.edit-grid__title {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+}
+
+.edit-grid__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-3);
+}
+
+/* Account View → Contacts tab: a contact cell, avatar beside name + job title (code-first, 2026-10-09). */
+.account-tab__person {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  min-inline-size: 0;
+}
+
+.account-tab__person-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+/* Quick links (record_markup.quick_links, 2026-10-09): the live view's insight row — X, LinkedIn,
+   Google / ChatGPT / Perplexity searches, Google Maps — at the top of the sidebar Record panel. The
+   brand marks are 24px images (icon-size-lg), approved exception to Lucide-only. */
+.quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quick-links__link {
+  display: flex;
+  border-radius: var(--ao-radius-sm);
+  transition: opacity var(--ao-transition-default);
+}
+
+.quick-links__link:hover {
+  opacity: 0.8;
+}
+
+.quick-links__link img {
+  width: var(--ao-icon-size-lg);
+  height: var(--ao-icon-size-lg);
+}

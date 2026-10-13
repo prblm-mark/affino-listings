@@ -1,0 +1,223 @@
+/* FilterItem — faceted filter chip. Uses only --ao-* design tokens.
+ *
+ * States (modifier classes):
+ *   (base)              Default  — solid border, "+ Name", opens a value picker
+ *   .filter-item--empty Empty    — dashed border placeholder ("add a filter")
+ *   .filter-item--selected       — info-soft fill, "× Name · values ⌄"
+ * Shape:
+ *   (base)              Rounded=False → --ao-radius-md
+ *   .filter-item--rounded         Rounded=True  → --ao-radius-full
+ * Interaction:
+ *   .filter-item--open  trigger expanded — chevron flips 180°
+ *
+ * Markup is always the full set of slots; the state classes show/hide them so a
+ * chip can move between Default ⇄ Selected without re-rendering (see FilterItem.js).
+ */
+
+.filter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-1); /* 4px */
+  height: var(--ao-spacing-7); /* 32px */
+  /* Figma: pl 8 / pr 12 / py 6 */
+  padding: var(--ao-spacing-2) var(--ao-spacing-4) var(--ao-spacing-2) var(--ao-spacing-3);
+  background: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  box-sizing: border-box;
+  /* A chip never outgrows the row it sits in. Reported on a phone, 2026-09-21:
+     "Countries · United Kingdom, and 3 more" ran past the filter bar and off
+     the screen. Everything below is the chain that makes the truncation
+     possible — a flex item will not shrink below its content unless every box
+     between it and here says it may. */
+  max-inline-size: 100%;
+}
+
+/* ── Shape ─────────────────────────────────────────────── */
+.filter-item--rounded {
+  border-radius: var(--ao-radius-full);
+}
+
+/* ── Empty (dashed placeholder) ────────────────────────── */
+.filter-item--empty {
+  border-style: dashed;
+  border-color: var(--ao-border-contrast);
+}
+
+/* ── Selected ──────────────────────────────────────────── */
+.filter-item--selected {
+  background: var(--ao-surface-info-soft);
+  border-color: var(--ao-border-info);
+}
+
+/* ── Mouseover (Figma State=MOuseover — sic, the typo is Figma's) ──
+ * Desktop 3664:14429 / Mobile 3664:14425. Exactly ONE property moves:
+ * the background. Border, text colour, icon, padding and radius are all
+ * identical to Default — checked on both devices rather than assumed
+ * from the desktop node.
+ *
+ * Scoped away from --selected and --open, which Figma paints with the
+ * info palette; a hover passing over those must not wash them out.
+ * --empty is excluded as well: Figma defines no Empty + Mouseover
+ * variant, and its Mouseover chip draws a SOLID border where --empty is
+ * dashed, so the two are not the same chip. Flagged in the notes.
+ *
+ * The transition lives on the companion REST rule rather than inside
+ * :hover, so it plays on the way out as well as in. */
+.filter-item:not(.filter-item--selected):not(.filter-item--open):not(.filter-item--empty) {
+  transition: background-color var(--ao-transition-default),
+              border-color var(--ao-transition-default);
+}
+
+.filter-item:not(.filter-item--selected):not(.filter-item--open):not(.filter-item--empty):hover {
+  background: var(--ao-surface-minimal);
+}
+
+/* ── Filter Dropdown Active (Figma State=Filter Dropdown Active) ──
+ * Desktop 3664:14437 / Mobile 3664:14441. The chip while its picker is
+ * open, and the same paint --selected already carries.
+ *
+ * It needs its own rule rather than leaning on --selected because
+ * Figma's Active variant shows an UNSELECTED chip — leading "+" icon,
+ * no values — wearing the info palette. So a chip picks this up the
+ * moment its dropdown opens, whether or not anything is chosen yet. */
+.filter-item--open {
+  background: var(--ao-surface-info-soft);
+  border-color: var(--ao-border-info);
+}
+
+/* ── Trigger (name · values + chevron; opens the picker) ── */
+.filter-item__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-1); /* 4px */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-inline-size: 0;
+}
+
+/* ── Clear (×) — selected only ─────────────────────────── */
+.filter-item__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ao-icon-contrast);
+  cursor: pointer;
+}
+
+/* ── Text ──────────────────────────────────────────────── */
+.filter-item__name,
+.filter-item__values {
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xxs); /* 12px */
+  line-height: var(--ao-leading-xs); /* 16px */
+  color: var(--ao-text-primary);
+  white-space: nowrap;
+  /* The only part of the chip that gives. The name says WHICH filter and the
+     count says how many are selected; the value is the one piece a reader can
+     still act on when it is cut short. */
+  display: inline-flex;
+  align-items: baseline;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;          /* for markup that puts plain text here */
+}
+
+/* The first value shortens… */
+.filter-item__values-lead {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* …and ", and 3 more" does not, or the chip stops saying how many. */
+.filter-item__values-rest {
+  flex: none;
+  white-space: nowrap;
+}
+
+.filter-item__name {
+  font-weight: var(--ao-font-medium);
+  /* Holds its ground: a chip that truncates its own NAME is unreadable. */
+  flex: none;
+}
+
+.filter-item__values {
+  font-weight: var(--ao-font-semibold);
+}
+
+.filter-item__sep {
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-sm); /* 16px */
+  line-height: var(--ao-leading-md); /* 24px */
+  letter-spacing: -0.3125px; /* optical — Figma tracking on the middot */
+  color: var(--ao-icon-contrast);
+}
+
+/* ── Icons (plus / x / chevron all render at 12px / contrast) ── */
+.filter-item [data-lucide] {
+  width: var(--ao-icon-size-xs); /* 12px */
+  height: var(--ao-icon-size-xs);
+  color: var(--ao-icon-contrast);
+  flex-shrink: 0;
+}
+
+.filter-item__chevron {
+  transition: transform var(--ao-transition-default);
+}
+
+.filter-item--open .filter-item__chevron {
+  transform: rotate(180deg);
+}
+
+/* ── Slot visibility per state ─────────────────────────── */
+/* Non-selected (Default / Empty): only the add icon + name show. */
+.filter-item:not(.filter-item--selected) .filter-item__clear,
+.filter-item:not(.filter-item--selected) .filter-item__sep,
+.filter-item:not(.filter-item--selected) .filter-item__values,
+.filter-item:not(.filter-item--selected) .filter-item__chevron {
+  display: none;
+}
+
+/* Selected: the leading add icon is replaced by the clear (×). */
+.filter-item--selected .filter-item__add {
+  display: none;
+}
+
+/* ── Focus (a11y — Figma defines no hover/focus state for the chip) ── */
+.filter-item__trigger:focus-visible,
+.filter-item__clear:focus-visible {
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: 2px;
+  border-radius: var(--ao-radius-sm);
+}
+
+/* ── Added (More Filters) ────────────────────────────────
+ * TODO(design:FilterItem): Figma defines no "already added" state. Its leading
+ * slot is `+` while empty and `×` once values are held, so a facet that is on
+ * the bar but holds no value has no variant to use.
+ *
+ * Implemented as the solid Default treatment with a check in that slot, which
+ * reads as "this one is on the bar — click to take it off" beside its dashed
+ * neighbours. It wants a real Figma variant.
+ */
+.filter-item--added {
+  border-style: solid;
+  border-color: var(--ao-border-brand);
+  color: var(--ao-text-primary);
+}
+
+.filter-item--added .filter-item__add {
+  color: var(--ao-icon-brand);
+}

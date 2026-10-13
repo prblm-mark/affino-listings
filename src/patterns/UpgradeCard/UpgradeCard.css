@@ -1,0 +1,86 @@
+/* UpgradeCard — version/update card. Two types (Update / No updates) ×
+ * two sizes (Base / Lg). Update variant includes a green CTA button.
+ *
+ * Figma: nodes 2758:3137 (Base/Update), 2758:3136 (Base/No updates),
+ *        2758:3139 (Lg/Update), 2758:3138 (Lg/No updates).
+ * File:  Lus07xi8pPXLN87sQIyrEt (Affino AI Design System)
+ *
+ * Composes: Button (btn btn--primary btn--sm) with a Case-B contextual
+ * override that swaps the bg to --ao-surface-success when nested inside
+ * .upgrade-card. Width is consumer-controlled.
+ */
+
+/* ── Card wrapper ─────────────────────────────────── */
+
+.upgrade-card {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-5);
+  width: 100%;
+  min-height: var(--ao-spacing-11);
+  padding: var(--ao-spacing-4);
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+}
+
+/* ── Text column ───────────────────────────────── */
+
+.upgrade-card__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: var(--ao-spacing-1);
+}
+
+.upgrade-card__version {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-bold);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-primary);
+}
+
+.upgrade-card__status {
+  margin: 0;
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-contrast);
+}
+
+/* ── Case-B contextual override: Update button is green ── */
+/* Scoped to UpgradeCard only — the base Button stays primary blue.    */
+
+.upgrade-card .btn--primary {
+  background-color: var(--ao-surface-success);
+  border-color: transparent;
+}
+
+.upgrade-card .btn--primary:hover,
+.upgrade-card .btn--primary:focus-visible {
+  background-color: var(--ao-surface-success);
+  filter: brightness(1.05);
+}
+
+.upgrade-card .btn--primary:active {
+  filter: brightness(0.95);
+}
+
+/* ── Size: Lg ─────────────────────────────────── */
+
+.upgrade-card--lg {
+  min-height: var(--ao-spacing-13);
+  padding: var(--ao-spacing-5);
+}
+
+.upgrade-card--lg .upgrade-card__version {
+  font-size: var(--ao-font-fixed-sm);
+}
+
+.upgrade-card--lg .upgrade-card__status {
+  font-size: var(--ao-font-fixed-xs);
+}

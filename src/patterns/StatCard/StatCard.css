@@ -1,0 +1,454 @@
+/* StatCard — small stat tile with an accent-coloured icon block, label,
+ * and value. 3 sizes (Sm / Base / Lg) × 5 type variants (Default / Chevron Down /
+ * Chevron Right / No card / Number First) × Fill.
+ *
+ * Fill = one of 21 accent colours (`.stat-card--<colour>`, default blue),
+ * solid or soft (`.stat-card--soft`). Each colour modifier only re-points
+ * the four --stat-card-* props at its --ao-accent-<colour>-* tokens.
+ *
+ * Figma: set 2758:3020 (Affino AI Design System — Tier=Pattern)
+ *
+ * Width is consumer-controlled (100% of parent). The icon block keeps
+ * a fixed square footprint per size; the text column fills the rest.
+ */
+
+/* ── Card wrapper ─────────────────────────────────── */
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-4);
+  width: 100%;
+  min-height: var(--ao-spacing-11);
+  padding: var(--ao-spacing-4);
+  background-color: var(--ao-surface-primary);
+  /* border/secondary: StatCard is usually a card INSIDE a panel, and in-panel
+   * cards keep the more prominent secondary edge (designer, 2026-10-02). Where
+   * it is a top-level card (the Orders totals) the screen sets border/card. */
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+
+  --stat-card-solid: var(--ao-accent-blue-solid);
+  --stat-card-solid-fg: var(--ao-accent-blue-solid-fg);
+  --stat-card-soft: var(--ao-accent-blue-soft);
+  --stat-card-soft-fg: var(--ao-accent-blue-soft-fg);
+}
+
+/* ── Icon block (accent square with Lucide icon centred) ── */
+
+.stat-card__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--ao-spacing-8);
+  height: var(--ao-spacing-8);
+  background-color: var(--stat-card-solid);
+  border-radius: var(--ao-radius-md);
+  color: var(--stat-card-solid-fg);
+}
+
+.stat-card--soft .stat-card__icon-wrap {
+  background-color: var(--stat-card-soft);
+  color: var(--stat-card-soft-fg);
+}
+
+.stat-card__icon-wrap [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+/* ── Text column ───────────────────────────────── */
+
+.stat-card__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: var(--ao-spacing-1);
+}
+
+.stat-card__title {
+  margin: 0;
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-contrast);
+}
+
+.stat-card__value {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-bold);
+  font-size: var(--ao-font-fixed-sm);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-primary);
+}
+
+/* ── Chevron (right-aligned, optional) ─────────── */
+
+.stat-card__chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--ao-icon-secondary);
+}
+
+.stat-card__chevron [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+/* ── Variant: Lg ──────────────────────────────── */
+
+.stat-card--lg {
+  gap: var(--ao-spacing-5);
+  min-height: var(--ao-spacing-13);
+  padding: var(--ao-spacing-5);
+}
+
+.stat-card--lg .stat-card__icon-wrap {
+  width: var(--ao-spacing-9);
+  height: var(--ao-spacing-9);
+}
+
+.stat-card--lg .stat-card__icon-wrap [data-lucide] {
+  width: var(--ao-icon-size-md);
+  height: var(--ao-icon-size-md);
+}
+
+/* ── Variant: Xl (code-first, 2026-10-02 — Orders totals) ──
+ * A headline KPI tile on a grid:
+ *   head   head        icon block + title / meta
+ *   value  breakdown   headline figure (+ unit) | ruled label / value pairs
+ * The breakdown sits BESIDE the headline behind a vertical rule (the
+ * designer's chosen "v2" — about 40% shorter than stacking it), and drops
+ * under it, behind a horizontal rule, when the screen is narrow.
+ * Designer-approved ahead of a Figma frame; every value is an --ao-* token
+ * and is listed in figma-notes for the Figma build. */
+.stat-card--xl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "head head"
+    "value breakdown";
+  align-items: center;
+  gap: var(--ao-spacing-4) var(--ao-spacing-6);
+  min-height: 0;
+  padding: var(--ao-spacing-5);
+}
+
+.stat-card__head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-4);
+  min-width: 0;
+}
+
+/* Title + meta sit tight together — no Base text-column gap on Xl. */
+.stat-card--xl .stat-card__text {
+  gap: 0;
+}
+
+.stat-card--xl .stat-card__icon-wrap {
+  width: var(--ao-spacing-9);
+  height: var(--ao-spacing-9);
+}
+
+.stat-card--xl .stat-card__icon-wrap [data-lucide] {
+  width: var(--ao-icon-size-lg);
+  height: var(--ao-icon-size-lg);
+}
+
+.stat-card--xl .stat-card__title {
+  font-size: var(--ao-font-fixed-sm);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-primary);
+}
+
+.stat-card__meta {
+  margin: 0;
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-2xs);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-contrast);
+}
+
+.stat-card--xl .stat-card__value {
+  grid-area: value;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-2);
+  font-size: var(--ao-font-fixed-xl);
+  line-height: var(--ao-leading-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-card__unit {
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-medium);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-contrast);
+}
+
+.stat-card__breakdown {
+  grid-area: breakdown;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-3) var(--ao-spacing-6);
+  margin: 0;
+  padding-left: var(--ao-spacing-6);
+  border-left: 1px solid var(--ao-border-secondary);
+}
+
+.stat-card__breakdown-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stat-card__breakdown-label {
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ao-text-contrast);
+}
+
+.stat-card__breakdown-value {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-sm);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--ao-text-primary);
+}
+
+/* Narrow screen (CLAUDE.md §4a): the card's own padding cannot self-query,
+ * so this keys on `cs-page`. Smaller throughout, breakdown under the value. */
+@container cs-page (max-width: 767px) {
+  .stat-card--xl {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "value" "breakdown";
+    gap: var(--ao-spacing-3);
+    padding: var(--ao-spacing-4);
+  }
+
+  .stat-card--xl .stat-card__head { gap: var(--ao-spacing-3); }
+
+  .stat-card--xl .stat-card__icon-wrap {
+    width: var(--ao-spacing-8);
+    height: var(--ao-spacing-8);
+  }
+
+  .stat-card--xl .stat-card__icon-wrap [data-lucide] {
+    width: var(--ao-icon-size-md);
+    height: var(--ao-icon-size-md);
+  }
+
+  .stat-card--xl .stat-card__title {
+    font-size: var(--ao-font-fixed-xs);
+    line-height: var(--ao-leading-sm);
+  }
+
+  .stat-card--xl .stat-card__value {
+    font-size: var(--ao-font-fixed-lg);
+    line-height: var(--ao-leading-md);
+  }
+
+  .stat-card__breakdown {
+    gap: var(--ao-spacing-3) var(--ao-spacing-5);
+    padding-left: 0;
+    padding-top: var(--ao-spacing-3);
+    border-left: 0;
+    border-top: 1px solid var(--ao-border-secondary);
+  }
+
+  .stat-card__breakdown-value { font-size: var(--ao-font-fixed-xs); }
+}
+
+/* ── Variant: Sm (designer, 2026-09-28 — Article Edit) ──
+ * Figma Size=Sm: gap + padding spacing/3, min-height spacing/10, title
+ * font/size-fixed/2xs. Icon block, value and radius are unchanged from Base. */
+
+.stat-card--sm {
+  gap: var(--ao-spacing-3);
+  min-height: var(--ao-spacing-10);
+  padding: var(--ao-spacing-3);
+}
+
+.stat-card--sm .stat-card__title {
+  font-size: var(--ao-font-fixed-2xs);
+}
+
+/* ── Variant: No card (transparent — no border, no pad) ── */
+
+.stat-card--no-card {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-height: var(--ao-spacing-8);
+}
+
+.stat-card--no-card.stat-card--sm {
+  padding: 0;
+  min-height: var(--ao-spacing-8);
+}
+
+.stat-card--no-card.stat-card--lg {
+  min-height: var(--ao-spacing-9);
+}
+
+/* ── Variant: Number First (swap title/value order) ── */
+
+.stat-card--number-first .stat-card__title {
+  order: 2;
+}
+
+.stat-card--number-first .stat-card__value {
+  order: 1;
+}
+
+/* ── Fill: accent colour (default blue — set on .stat-card) ── */
+
+.stat-card--blue {
+  --stat-card-solid: var(--ao-accent-blue-solid);
+  --stat-card-solid-fg: var(--ao-accent-blue-solid-fg);
+  --stat-card-soft: var(--ao-accent-blue-soft);
+  --stat-card-soft-fg: var(--ao-accent-blue-soft-fg);
+}
+
+.stat-card--mid-blue {
+  --stat-card-solid: var(--ao-accent-mid-blue-solid);
+  --stat-card-solid-fg: var(--ao-accent-mid-blue-solid-fg);
+  --stat-card-soft: var(--ao-accent-mid-blue-soft);
+  --stat-card-soft-fg: var(--ao-accent-mid-blue-soft-fg);
+}
+
+.stat-card--dark-blue {
+  --stat-card-solid: var(--ao-accent-dark-blue-solid);
+  --stat-card-solid-fg: var(--ao-accent-dark-blue-solid-fg);
+  --stat-card-soft: var(--ao-accent-dark-blue-soft);
+  --stat-card-soft-fg: var(--ao-accent-dark-blue-soft-fg);
+}
+
+.stat-card--emerald {
+  --stat-card-solid: var(--ao-accent-emerald-solid);
+  --stat-card-solid-fg: var(--ao-accent-emerald-solid-fg);
+  --stat-card-soft: var(--ao-accent-emerald-soft);
+  --stat-card-soft-fg: var(--ao-accent-emerald-soft-fg);
+}
+
+.stat-card--orange {
+  --stat-card-solid: var(--ao-accent-orange-solid);
+  --stat-card-solid-fg: var(--ao-accent-orange-solid-fg);
+  --stat-card-soft: var(--ao-accent-orange-soft);
+  --stat-card-soft-fg: var(--ao-accent-orange-soft-fg);
+}
+
+.stat-card--pink {
+  --stat-card-solid: var(--ao-accent-pink-solid);
+  --stat-card-solid-fg: var(--ao-accent-pink-solid-fg);
+  --stat-card-soft: var(--ao-accent-pink-soft);
+  --stat-card-soft-fg: var(--ao-accent-pink-soft-fg);
+}
+
+.stat-card--red {
+  --stat-card-solid: var(--ao-accent-red-solid);
+  --stat-card-solid-fg: var(--ao-accent-red-solid-fg);
+  --stat-card-soft: var(--ao-accent-red-soft);
+  --stat-card-soft-fg: var(--ao-accent-red-soft-fg);
+}
+
+.stat-card--green {
+  --stat-card-solid: var(--ao-accent-green-solid);
+  --stat-card-solid-fg: var(--ao-accent-green-solid-fg);
+  --stat-card-soft: var(--ao-accent-green-soft);
+  --stat-card-soft-fg: var(--ao-accent-green-soft-fg);
+}
+
+.stat-card--purple {
+  --stat-card-solid: var(--ao-accent-purple-solid);
+  --stat-card-solid-fg: var(--ao-accent-purple-solid-fg);
+  --stat-card-soft: var(--ao-accent-purple-soft);
+  --stat-card-soft-fg: var(--ao-accent-purple-soft-fg);
+}
+
+.stat-card--indigo {
+  --stat-card-solid: var(--ao-accent-indigo-solid);
+  --stat-card-solid-fg: var(--ao-accent-indigo-solid-fg);
+  --stat-card-soft: var(--ao-accent-indigo-soft);
+  --stat-card-soft-fg: var(--ao-accent-indigo-soft-fg);
+}
+
+.stat-card--blue-radix {
+  --stat-card-solid: var(--ao-accent-blue-radix-solid);
+  --stat-card-solid-fg: var(--ao-accent-blue-radix-solid-fg);
+  --stat-card-soft: var(--ao-accent-blue-radix-soft);
+  --stat-card-soft-fg: var(--ao-accent-blue-radix-soft-fg);
+}
+
+.stat-card--teal-radix {
+  --stat-card-solid: var(--ao-accent-teal-radix-solid);
+  --stat-card-solid-fg: var(--ao-accent-teal-radix-solid-fg);
+  --stat-card-soft: var(--ao-accent-teal-radix-soft);
+  --stat-card-soft-fg: var(--ao-accent-teal-radix-soft-fg);
+}
+
+.stat-card--green-radix {
+  --stat-card-solid: var(--ao-accent-green-radix-solid);
+  --stat-card-solid-fg: var(--ao-accent-green-radix-solid-fg);
+  --stat-card-soft: var(--ao-accent-green-radix-soft);
+  --stat-card-soft-fg: var(--ao-accent-green-radix-soft-fg);
+}
+
+.stat-card--jade {
+  --stat-card-solid: var(--ao-accent-jade-solid);
+  --stat-card-solid-fg: var(--ao-accent-jade-solid-fg);
+  --stat-card-soft: var(--ao-accent-jade-soft);
+  --stat-card-soft-fg: var(--ao-accent-jade-soft-fg);
+}
+
+.stat-card--lagoon {
+  --stat-card-solid: var(--ao-accent-lagoon-solid);
+  --stat-card-solid-fg: var(--ao-accent-lagoon-solid-fg);
+  --stat-card-soft: var(--ao-accent-lagoon-soft);
+  --stat-card-soft-fg: var(--ao-accent-lagoon-soft-fg);
+}
+
+.stat-card--orange-radix {
+  --stat-card-solid: var(--ao-accent-orange-radix-solid);
+  --stat-card-solid-fg: var(--ao-accent-orange-radix-solid-fg);
+  --stat-card-soft: var(--ao-accent-orange-radix-soft);
+  --stat-card-soft-fg: var(--ao-accent-orange-radix-soft-fg);
+}
+
+.stat-card--red-radix {
+  --stat-card-solid: var(--ao-accent-red-radix-solid);
+  --stat-card-solid-fg: var(--ao-accent-red-radix-solid-fg);
+  --stat-card-soft: var(--ao-accent-red-radix-soft);
+  --stat-card-soft-fg: var(--ao-accent-red-radix-soft-fg);
+}
+
+.stat-card--violet-radix {
+  --stat-card-solid: var(--ao-accent-violet-radix-solid);
+  --stat-card-solid-fg: var(--ao-accent-violet-radix-solid-fg);
+  --stat-card-soft: var(--ao-accent-violet-radix-soft);
+  --stat-card-soft-fg: var(--ao-accent-violet-radix-soft-fg);
+}
+
+.stat-card--lime-radix {
+  --stat-card-solid: var(--ao-accent-lime-radix-solid);
+  --stat-card-solid-fg: var(--ao-accent-lime-radix-solid-fg);
+  --stat-card-soft: var(--ao-accent-lime-radix-soft);
+  --stat-card-soft-fg: var(--ao-accent-lime-radix-soft-fg);
+}

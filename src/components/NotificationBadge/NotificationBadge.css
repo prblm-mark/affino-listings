@@ -1,0 +1,37 @@
+/* NotificationBadge — bell button with overlaid count badge.
+ * Figma: ETKqleZdpertwFEo40YB5n (CC Hybrid). Not a standalone Figma component;
+ * extracted from the repeating Notification layer used in CCHeader variants
+ * (e.g. 4095:3413, 4097:3411, 4110:3414, 4113:3433, 4097:3565, 4097:3411).
+ *
+ * Wraps a `.btn.btn--tertiary.btn--icon` for the bell trigger and overlays
+ * a circular count badge. Two sizes: default (40px) and sm (32px). Badge
+ * positioning is translate-based for size-agnostic placement.
+ */
+
+.notification-badge {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.notification-badge__count {
+  position: absolute;
+  top: var(--ao-spacing-3);
+  right: var(--ao-spacing-3);
+  transform: translate(25%, -25%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--ao-spacing-4);
+  min-height: var(--ao-spacing-5);
+  padding: 0 var(--ao-spacing-1);
+  background-color: var(--ao-surface-error);
+  border: 2px solid var(--ao-surface-primary);
+  border-radius: var(--ao-radius-full);
+  color: var(--ao-text-invert);
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-bold);
+  font-size: 8px; /* badge counter — sub-token optical size, no semantic token (Figma value) */
+  line-height: 1;
+  pointer-events: none;
+}

@@ -1,0 +1,121 @@
+/* Base styles — imports design tokens and sets global defaults using --ao-* variables */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import '../../css/tokens.css';
+@import '../../css/tokens-mobile.css';
+@import '../../css/tokens-dark.css';
+@import '../../css/tokens-chat.css';
+@import '../../css/tokens-chat-dark.css';
+@import '../../css/tokens-cc.css';
+@import '../../css/tokens-cc-dark.css';
+@import '../../css/tokens-minimised.css';
+/* Seating Planner role colours — `--sp-*`, named from Figma's codeSyntax.WEB. One palette, at
+   :root (the Muted / Radix Soft mode files were removed 2026-10-09). */
+@import '../../css/tokens-seating-default.css';
+@import url('../../css/tokens-gradients.css');
+@import url('../../css/tokens-shadows.css');
+
+/* ── Transition presets ──────────────────────── */
+:root {
+  --ao-transition-fast:    100ms ease;
+  --ao-transition-default: 150ms ease;
+  --ao-transition-slow:    250ms ease;
+  --ao-transition-spring:  200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Breakpoints (convention — mobile-first, mirrors Tailwind scale) ── */
+:root {
+  --ao-bp-sm:  40rem;   /* 640px  */
+  --ao-bp-md:  48rem;   /* 768px  */
+  --ao-bp-lg:  64rem;   /* 1024px */
+  --ao-bp-xl:  80rem;   /* 1280px */
+  --ao-bp-2xl: 96rem;   /* 1536px */
+}
+
+/* ── Sub-rem optical spacing ──────────────────── */
+/* Single 1px slot for hairline padding / inset alignment use cases
+ * that fall below the smallest rem-based --ao-spacing-* step. Not
+ * sourced from Figma (the scale starts at 4px) — defined here next
+ * to the other static custom properties. */
+:root {
+  --ao-spacing-px: 1px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The HTML `hidden` attribute is an accessibility primitive — it must
+ * always hide the element regardless of any author `display` rule. UA
+ * `[hidden] { display: none }` has the same specificity (0,1,0) as any
+ * class-based `display: flex` and loses to later author rules, so we
+ * raise the priority globally. !important is allowed for utility /
+ * accessibility classes per project rules. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  font-family: var(--ao-font-body), sans-serif;
+  font-size: var(--ao-font-fixed-sm);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-primary);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--ao-surface-primary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ao-font-title), sans-serif;
+  font-weight: var(--ao-font-semibold);
+  color: var(--ao-text-primary);
+  margin: 0 0 var(--ao-spacing-4);
+  line-height: var(--ao-leading-lg);
+}
+
+h1 { font-size: var(--ao-font-fixed-4xl); }
+h2 { font-size: var(--ao-font-fixed-3xl); }
+h3 { font-size: var(--ao-font-fixed-2xl); }
+h4 { font-size: var(--ao-font-fixed-xl); }
+h5 { font-size: var(--ao-font-fixed-lg); }
+h6 { font-size: var(--ao-font-fixed-md); }
+
+p {
+  margin: 0 0 var(--ao-spacing-5);
+  color: var(--ao-text-secondary);
+}
+
+a {
+  color: var(--ao-surface-brand);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--ao-surface-brand-light);
+  text-decoration: underline;
+}
+
+/* ── SVG / Lucide icon rendering ──────────────────────── */
+svg,
+[data-lucide] {
+  shape-rendering: geometricPrecision;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: 2px;
+  border-radius: var(--ao-radius-sm);
+}

@@ -1,0 +1,1015 @@
+/* Listing Screen — Control Centre template
+ * Figma: page "Listings" 3644:125909
+ *        Default · Desktop 3645:148870 / Default · Mobile 3648:161126
+ *
+ * The template behind ~400 Control Centre screens. Each screen differs
+ * only in its datatable Type and its default filter set, both of which
+ * are data (listing-data.js), not CSS.
+ *
+ * SCOPE OF THIS FILE
+ * Deliberately small. The shell (sidebar, chrome, scrolling page) is
+ * ControlScreen's — this template reuses `.cc-control__*` wholesale
+ * rather than forking it, exactly as SeatingPlanner does, because in
+ * Figma both screens are instances of the same "CC Shell" component.
+ * The datatable's Orders styling lives with its component in
+ * Datatables.css (`.datatables--orders`), since Type=Orders is a
+ * variant of Datatables, not of this template.
+ *
+ * So all that is left here is the content column itself.
+ */
+
+/* ── Page content column ─────────────────────────────────
+ * Figma "Frame 1" (I3645:147421;4291:8836;3645:147644): a plain
+ * vertical stack, FilterBar then Datatables, 12px apart.
+ *
+ * This wrapper exists because `.cc-control__page` sets gap
+ * --ao-spacing-7 (32px) for ControlScreen's multi-section dashboard,
+ * and the listing needs --ao-spacing-4 (12px). Overriding the page's
+ * own gap would change it for anything else dropped on the page, so
+ * the listing owns its spacing in its own box.
+ *
+ * `min-inline-size: 0` so the table can shrink inside the flex column
+ * instead of forcing the page to scroll sideways — the intrinsic fix
+ * CLAUDE.md §4a asks for, applied before any breakpoint.
+ */
+
+.cc-listing {
+  /* The page's top padding, which both sticky offsets pull back by (see
+   * `.cc-listing__selection`). ONE variable so the two stickies and the two
+   * templates cannot drift apart: spacing-6 here, spacing-4 below 768px (foot
+   * of file), 0 on the full-width template. */
+  --cc-listing-pad-top: var(--ao-spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-4);
+  min-inline-size: 0;
+}
+
+/* The page already establishes the `cs-page` container and
+ * `isolation: isolate`; the listing adds no stacking context of its
+ * own, so an open FilterBar dropdown still paints above the table. */
+
+/* NOTE — deliberately no `padding` here.
+ *
+ * `.cc-control__page` already applies the Figma inset (--ao-spacing-6), and
+ * then TRIMS padding-right to --ao-spacing-4 so the content sits evenly
+ * against the scrollbar gutter, which `scrollbar-gutter: stable` reserves on
+ * the right edge only. 12px padding + a 15px gutter reads as 27 against the
+ * 24 on the left — the closest the spacing scale gets to even.
+ *
+ * Re-declaring `padding: var(--ao-spacing-6)` on this modifier defeated that:
+ * same specificity (one class), but ListingScreen.css loads after
+ * ControlScreen.css, so the shorthand won and restored a full 24px right
+ * padding. With the gutter on top the right gap measured 39 against 24 —
+ * which is exactly the asymmetry this comment exists to prevent recurring.
+ *
+ * `scrollbar-gutter: stable both-edges` looks like the tidier fix and is not:
+ * it reserves a gutter on BOTH edges, so the left gap becomes 24+15=39 while
+ * the trimmed right stays 27, making the imbalance worse in the other
+ * direction. The trim is the house solution — leave the page's padding alone.
+ */
+
+/* ── FilterBar in the listing context ────────────────────
+ * FilterBar is a full pattern already; it needs no restyling here.
+ * It must not shrink away from the table it filters, though — without
+ * this the flex column can compress the two-row bar when the chip row
+ * wraps.
+ */
+
+.cc-listing .filter-bar {
+  flex: 0 0 auto;
+}
+
+/* Listing form controls sit on surface/minimal (designer, 2026-10-02): the
+ * saved-views trigger, the search / new-view inputs in the FilterBar's top
+ * row, and the Datatables rows-per-page select. Scoped to the top row so the
+ * inputs inside the filter pickers keep their own fill. */
+.cc-listing > .filter-bar > .filter-bar__row--top .filter-bar__views-trigger,
+.cc-listing > .filter-bar > .filter-bar__row--top .input__wrap,
+.cc-listing > .datatables .datatables__select {
+  background-color: var(--ao-surface-minimal);
+}
+
+/* Top-level listing cards lift off the page with shadow/2xs (designer,
+ * 2026-10-02): FilterBar, the Orders totals tiles, Datatables. Child
+ * combinators, so the Datatables inside a Multi Select Table picker stays flat.
+ * The full-width template is flush to the page and drops it — see below. */
+.cc-listing > .filter-bar,
+.cc-listing > .datatables,
+.cc-listing > .cc-listing__totals > .stat-card {
+  box-shadow: var(--ao-shadow-2xs);
+}
+
+/* …and their outer edge is border/card (designer, 2026-10-02), the same as
+ * border/secondary except in CCDark (Grey/750). Only the OUTER border: the
+ * FilterBar's row divider and the table's row rules keep their own colours.
+ * The totals tiles are top-level cards too, so they take it here: StatCard's own
+ * default is border/secondary, the in-panel edge. Full width redraws these
+ * edges as flush rules (more specific, below), which stay as they are. */
+.cc-listing > .filter-bar,
+.cc-listing > .datatables,
+.cc-listing > .cc-listing__totals > .stat-card {
+  border-color: var(--ao-border-card);
+}
+
+/* ── Order totals (proposal, code-first 2026-10-02) ───────
+ * Two StatCard Xl tiles; no Figma frame yet. The grid gap is `.cc-listing`'s
+ * own gap, to be confirmed when the designer formalises the frame. */
+.cc-listing__totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ao-spacing-4);
+}
+
+@container cs-page (max-width: 767px) {
+  .cc-listing__totals { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Empty state ─────────────────────────────────────────
+ * TODO(design:Listing): Datatables defines no empty state in Figma. This
+ * mirrors EventPicker's `Type=Event Picker (no results)` (3108:6659) token
+ * for token — the established treatment on the CC surface — rather than
+ * inventing a second one. It should become a Datatables Figma variant.
+ */
+
+/* The cell stays a cell so colspan holds; the flex column is the div inside. */
+.cc-listing__empty-cell {
+  padding: 0;
+}
+
+.cc-listing__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  padding: var(--ao-spacing-9) var(--ao-spacing-6);
+  text-align: center;
+  /* Table.css puts `white-space: nowrap` on every cell and it inherits
+     straight in here, so the description below never wrapped — it ran as one
+     line, ignored its own 320px cap and pushed the TABLE wider than the page.
+     Reported on a phone 2026-09-21, and just as wrong on a desktop with a
+     narrow column. Same inheritance trap as the row detail list. */
+  white-space: normal;
+}
+
+.cc-listing__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ao-spacing-8);            /* 40px */
+  height: var(--ao-spacing-8);
+  border-radius: var(--ao-radius-full);
+  background: var(--ao-surface-minimal);
+  color: var(--ao-icon-contrast);
+}
+
+.cc-listing__empty-icon [data-lucide] {
+  width: var(--ao-icon-size-md);
+  height: var(--ao-icon-size-md);
+}
+
+.cc-listing__empty-title {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-primary);
+}
+
+.cc-listing__empty-desc {
+  margin: 0;
+  /* A cap, and never a floor: `max-width` alone still let the cell's
+     min-content set the width. With wrapping restored above, 320 is a
+     measure, and 100% keeps it inside a column narrower than that. */
+  max-width: min(var(--ao-size-6), 100%);  /* 320px */
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xxs);
+  font-weight: var(--ao-font-regular);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-secondary);
+}
+
+/* ── Edit Columns ────────────────────────────────────────
+ * A NEW capability, not a reproduction — the live Orders screen has no
+ * column picker and no per-user preference (verified in its source,
+ * 2026-09-18). Built as a working prototype at Mark's direction; the
+ * choices are in memory, like the saved views.
+ *
+ * The panel is the shared Dropdown; only the list inside is ours.
+ */
+
+.cc-listing__columns {
+  position: relative;
+}
+
+/* Not on a phone or a tablet (designer, 2026-09-21).
+ *
+ * There is nothing for it to do at those sizes: the fit is down to the columns
+ * that identify a row, everything else is already behind the kebab, and the
+ * panel is a 240px drag-and-drop list — choosing and REORDERING columns is a
+ * task for a pointer and a wide table. The toolbar keeps the page-size
+ * control, which means something at any width.
+ *
+ * ── A DELIBERATE @media, and the reason matters ──────────
+ * Everything else about this table keys on its own container, per CLAUDE.md
+ * §4a, and the first cut of this rule did too — `@container (max-width:
+ * 767px)`. That was wrong for this particular control. The table's width is
+ * not the question here: it asks "is there room", and with the SidebarMenu
+ * docked a 1024px LAPTOP leaves a 557px table, so the button vanished on a
+ * machine whose owner is very much able to use it (designer, 2026-09-21).
+ *
+ * The question this rule asks is "what is the person working on" — a device
+ * question, which §4a names as the one case a viewport query is right for.
+ * A laptop keeps its column editor however the sidebar is docked; a phone
+ * never has one. 1024 is the laptop floor.
+ *
+ * The panel is 240px and right-anchored, so it sits comfortably even in the
+ * narrowest table a 1024px laptop can produce. */
+@media (max-width: 1023px) {
+  .cc-listing__columns {
+    display: none;
+  }
+}
+
+/* ── Settings: "When columns don't fit" ─────────────────
+ * Luismi's team's design (Hub TASK-492924), built code-first 2026-09-29 — no Figma frame yet.
+ * Same Dropdown + secondary trigger as Edit Columns, right after it, and hidden on the same
+ * terms: below the 1024 laptop floor (the device question above) and in grid layout (JS).
+ * The panel holds the DS Radio component; the options stack with Radio's own spacing-3. */
+.cc-listing__settings {
+  position: relative;
+}
+
+@media (max-width: 1023px) {
+  .cc-listing__settings {
+    display: none;
+  }
+}
+
+.dropdown__panel--settings {
+  left: auto;
+  inset-inline-end: 0;          /* right-anchored so it stays inside the table card */
+  min-width: var(--ao-size-4);  /* 240px, as Edit Columns */
+}
+
+/* The heading sits flush with the radios, with a spacing-3 step down to them (designer amend,
+ * 2026-09-29). Scoped to this panel: the shared dropdown__label keeps its spacing-4 inset. */
+.dropdown__panel--settings .dropdown__label {
+  padding-left: 0;
+  padding-bottom: var(--ao-spacing-3);
+}
+
+.cc-listing__settings-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+}
+
+.dropdown__panel--columns {
+  /* The rows are draggable, and a drag that starts anywhere but the grip
+     otherwise sweeps a text selection across the list — which reads as the
+     drag failing rather than as having missed the handle. Nothing in this
+     panel is worth copying, so selection is off for the whole thing. */
+  user-select: none;
+  -webkit-user-select: none;   /* Safari */
+  left: auto;
+  inset-inline-end: 0;
+  min-width: var(--ao-size-4);           /* 240px */
+  max-height: var(--ao-size-7);          /* 384px */
+  overflow-y: auto;
+}
+
+.cc-listing__columns-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-2);
+}
+
+.cc-listing__column {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ao-spacing-2);
+  padding: var(--ao-spacing-2) var(--ao-spacing-3);
+  border-radius: var(--ao-radius-sm);
+  /* The insertion line is drawn as a border so it takes no layout space —
+     a margin or an inserted element would make the list jump while dragging. */
+  border-block: 1px solid transparent;
+}
+
+.cc-listing__column:hover {
+  background-color: var(--ao-surface-minimal);
+}
+
+.cc-listing__column .checkbox {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* Drag handle. The row is only made draggable while the pointer is on this,
+ * so the checkbox stays clickable. */
+.cc-listing__column-grip {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  color: var(--ao-icon-contrast);
+  cursor: grab;
+}
+
+.cc-listing__column-grip [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+.cc-listing__column--dragging {
+  opacity: var(--ao-opacity-disabled, 0.5);
+}
+
+.cc-listing__column--over-before {
+  border-block-start-color: var(--ao-border-brand);
+}
+
+.cc-listing__column--over-after {
+  border-block-end-color: var(--ao-border-brand);
+}
+
+/* Order No. and Customer identify the row; without them the table is a
+ * list of anonymous numbers, so their checkboxes are disabled rather than
+ * absent — the user can see WHY they cannot be removed. */
+.cc-listing__column--locked {
+  cursor: default;
+  opacity: var(--ao-opacity-disabled, 0.5);
+}
+
+/* Where the columns stop fitting. The fit fills in order, so everything below
+ * this heading is the tail that has no room — said once here rather than on
+ * every row. */
+.cc-listing__column-heading {
+  margin-block: var(--ao-spacing-3) var(--ao-spacing-1);
+}
+
+/* ── Rows-per-page menu ──────────────────────────────────
+ * The "Show 20" control is the shared Dropdown; it only needs to hug its
+ * short numeric options rather than take Dropdown's 240px default. */
+.cc-listing__per-page {
+  position: relative;
+}
+
+.dropdown__panel--per-page {
+  min-width: var(--ao-size-1);
+  padding: var(--ao-spacing-3);
+}
+
+/* ── Grid view (Media Items) ──────────────────────────────
+ *
+ * The other half of the live screen's MediaLayOut switch. Live renders it
+ * through MediaLightbox.cfm as a bordered <table> of fixed 140px cells, with
+ * the column count coming from a per-client Media Library Profile setting
+ * (MEDIALIBRARYSLIDECOLUMNS) — so it does not respond to its container at all,
+ * and a docked sidebar simply crops it.
+ *
+ * `auto-fill` + `minmax` instead, so the grid reflows with the content column
+ * the way CLAUDE.md §4a asks. The minimum is --ao-size-2 (160px), the
+ * designer's call against live's off-scale 140: a touch wider, so the name has
+ * room to be read rather than truncated to two words.
+ *
+ * Which view is showing is an attribute on the listing root, not two screens.
+ * Both share the toolbar, the page size and the pager, because live shares
+ * them too — the Grid and the Listing are one query rendered twice.
+ */
+
+/* CHILD COMBINATORS, not a descendant match. `.datatables__body` is not
+ * unique inside the listing: every multi-select-table picker renders its own
+ * `<div class="datatables"><div class="datatables__body">` (ListingScreen.js
+ * line ~531), so a descendant selector hides the Channel and Section pickers'
+ * tables whenever the screen is in grid view — a control that silently stops
+ * working in one of two views. `listingTable()` already carries a comment
+ * about being caught by exactly this; the CSS needed the same care. */
+.cc-listing[data-layout="grid"] > .datatables > .datatables__body { display: none; }
+.cc-listing[data-layout="listing"] > .datatables > .cc-listing__grid { display: none; }
+
+.cc-listing__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--ao-size-2), 1fr));
+  gap: var(--ao-spacing-5);
+  padding: var(--ao-spacing-5);
+  margin: 0;
+  list-style: none;
+}
+
+.cc-grid__item { min-inline-size: 0; }
+
+.cc-grid__card {
+  display: flex;
+  flex-direction: column;
+  /* Picture to caption (designer, 2026-09-22). Twice the 4px INSIDE the
+     caption, which is what keeps the two text lines reading as one block
+     rather than as two more children of the card. */
+  gap: var(--ao-spacing-3);
+  min-inline-size: 0;
+}
+
+/* The picture. Square, because the source thumbnails are generated square and
+ * a grid of mixed aspect ratios is a ragged grid. */
+.cc-grid__media {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  background-color: var(--ao-surface-secondary);
+  color: var(--ao-icon-contrast);
+  overflow: hidden;
+  transition: border-color var(--ao-transition-default),
+              box-shadow var(--ao-transition-default);
+}
+
+/* The link fills the box AND centres what is in it. It used to be
+ * `display: block`, which put the family glyph of every non-image card in the
+ * TOP-LEFT corner instead of the middle — `.cc-grid__media` centres its own
+ * children, and the glyph is the link's child, not the media box's. Visible on
+ * every PDF and ZIP card and caught from a screenshot, not from the code. */
+.cc-grid__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.cc-grid__media img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A family glyph for the rows with no picture, sized like the listing's.
+ * Descendant, not child: the glyph sits inside the link, so the `>` this
+ * started with matched nothing and the icon fell back to Lucide's own 24px by
+ * coincidence rather than by instruction. Scoped past `.cc-grid__actions` so
+ * it cannot reach the buttons' own icons. */
+.cc-grid__link [data-lucide],
+.cc-grid__link svg {
+  inline-size: var(--ao-icon-size-lg);
+  block-size: var(--ao-icon-size-lg);
+}
+
+.cc-grid__card:hover .cc-grid__media,
+.cc-grid__card:focus-within .cc-grid__media {
+  border-color: var(--ao-border-brand);
+}
+
+.cc-grid__card--selected .cc-grid__media {
+  border-color: var(--ao-border-brand);
+  box-shadow: 0 0 0 1px var(--ao-border-brand);
+}
+
+/* Checkbox and pencil sit ON the picture, revealed on hover — the live grid's
+ * own idiom (`.MediaButtons`, visibility hidden until mouseenter, and kept
+ * visible while that item is checked). Kept visible on FOCUS too, which the
+ * live one is not: a hover-only control cannot be reached by keyboard.
+ *
+ * And revealed unconditionally where there is no hover at all — see the
+ * `(hover: none)` block below. Reveal-on-hover is not a style, it is a bet
+ * that the device has a pointer. */
+.cc-grid__select,
+.cc-grid__actions {
+  position: absolute;
+  inset-block-start: var(--ao-spacing-2);
+  opacity: 0;
+  transition: opacity var(--ao-transition-default);
+}
+
+.cc-grid__select { inset-inline-start: var(--ao-spacing-2); }
+
+/* Three of them on an image card, two on anything else — see `gridActions`. */
+.cc-grid__actions {
+  inset-inline-end: var(--ao-spacing-2);
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-1);
+}
+
+.cc-grid__card:hover .cc-grid__select,
+.cc-grid__card:hover .cc-grid__actions,
+.cc-grid__card:focus-within .cc-grid__select,
+.cc-grid__card:focus-within .cc-grid__actions,
+.cc-grid__card--selected .cc-grid__select {
+  opacity: 1;
+}
+
+/* The checkbox needs its own backing so it reads against any photograph. */
+.cc-grid__select .checkbox__indicator {
+  background-color: var(--ao-surface-primary);
+}
+
+/* Name and meta are ONE block, not two siblings of the picture. The card's own
+ * gap separates the picture from the text; this pair is a caption and wants to
+ * read as one thing, so it gets its own tighter gap (designer, 2026-09-22) —
+ * --ao-spacing-1 (4px) against the card's --ao-spacing-3 (8px), both steps on
+ * the scale rather than numbers picked to look right.
+ *
+ * `min-inline-size: 0` so both lines can still ellipsise: a flex child's
+ * automatic minimum is its content, and without this the longest name would
+ * set the column's width instead of truncating to it. */
+.cc-grid__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-1);
+  min-inline-size: 0;
+}
+
+.cc-grid__name {
+  margin: 0;
+  font-family: var(--ao-font-body);
+  /* 13px (designer, 2026-09-22), a step up from the 12px meta line beneath it.
+     FIXED, not fluid — `--ao-font-fluid-*` steps down on a phone, and the card
+     name is the one thing on a grid card that must stay readable there. */
+  font-size: var(--ao-font-fixed-2xs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-grid__meta {
+  margin: 0;
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The no-results card spans the whole grid rather than sitting in one cell. */
+.cc-grid__empty { grid-column: 1 / -1; }
+
+/* ── Selection bar ────────────────────────────────────────
+ * One bar for both views, shown only when something is ticked. The live Grid
+ * keeps a permanent "Select all" above it and a permanent Move/Delete row
+ * below — two pieces of chrome for a state that is usually empty.
+ */
+.cc-listing__selection {
+  display: flex;
+  align-items: center;
+  /* The BAR wraps, not just the actions inside it. With only the inner row
+     wrapping, the count and Clear held their line and the three 160px selects
+     had nowhere to go — measured 34px of overflow at a 309px table, which
+     dragged the whole datatable wider than its column. */
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-4);
+  padding: var(--ao-spacing-3) var(--ao-spacing-5);
+  border-block-end: 1px solid var(--ao-border-secondary);
+  /* The datatable's own expanded-row tint (designer, 2026-09-22), not a brand
+   * wash: this bar is a STATE OF THE TABLE, the same way an expanded row is,
+   * and it should read as the table reacting rather than as a notice pasted
+   * over it. Themed — #f3f6f7 on cc, #293548 on cc-dark.
+   *
+   * (It was `--ao-surface-brand-soft`. Worth keeping the note that
+   * `--ao-surface-brand-contrast` does NOT exist: the Apr 2026 rename took
+   * every `-contrast` brand and status surface to `-soft`, and the focus-ring
+   * examples still quoting the old name are stale.) */
+  background-color: var(--ao-datatable-table-expanded-bg);
+  /* Sticky under the CC header (designer, 2026-09-23). Select-all lives in
+   * the table head, so ticking a row far down the page used to show a bar
+   * that had already scrolled away above you — the actions were there and
+   * unreachable. `top: 0` is the right edge because the header is OUTSIDE the
+   * scroller: `.cc-control__page` scrolls and the chrome sits above it, so the
+   * scroller's top edge IS the underside of the header.
+   *
+   * It sticks within its own parent, `.datatables`, so it leaves with the
+   * table when you scroll past the end of it rather than floating over the
+   * page. That only works because `.datatables` is `overflow: clip` — with
+   * `hidden` it became the sticky's scroll container and nothing moved.
+   *
+   * z-index 2: above the rows scrolling under it (no row control sets one)
+   * AND above the sticky table header (1), so this bar's own select menus
+   * open over the header rather than behind it; below an open dropdown or
+   * row menu (10/11), which should cover whatever it opens over.
+   *
+   * NEGATIVE top, not 0: a sticky is inset by its scroller's PADDING, so at
+   * `top: 0` it pinned 24px below the header with rows showing through the
+   * gap (measured). Pulling it up by the page's own top padding lands it on
+   * the scroller's edge. Keep in step with `.cc-control__page`'s padding in
+   * ControlScreen.css — spacing-6, and spacing-4 below a 768px viewport (the
+   * override is at the foot of this file, on the same viewport @media, since
+   * the page cannot query its own container). */
+  position: sticky;
+  inset-block-start: calc(var(--cc-listing-pad-top) * -1);
+  z-index: 2;
+  transition: box-shadow var(--ao-transition-default);
+}
+
+/* `--stuck` (set by `watchSelectionStuck` in ListingScreen.js) carried a
+ * shadow/sm while pinned. Removed for now at the designer's call, 2026-09-23 —
+ * the class is still set, so a treatment can come back with one rule. */
+
+.cc-listing__selection[hidden] { display: none; }
+
+/* ── Sticky table header ──────────────────────────────────
+ * The column header pins too (designer, 2026-09-23), under the CC header —
+ * or under the selection bar when that is showing. Select-all lives in it, so
+ * pinning it keeps that reachable as well.
+ *
+ * TWO THINGS HAD TO GIVE for it to stick at all:
+ *
+ * 1. `.datatables__body` is `overflow-x: auto` (Datatables.css), and any
+ *    non-visible overflow makes it a scroll container — so a sticky inside it
+ *    sticks to the body, which never scrolls vertically. On the listing it is
+ *    `overflow-x: clip` instead. That is only safe because the column fit
+ *    already keeps the table inside its body: measured on all three listing
+ *    screens at 320, 390, 600, 768, 1024, 1280, 1600 and 1920, horizontal
+ *    overflow was 0 in all 24. If a future column set could overflow, it
+ *    would be clipped here rather than scroll — revisit this line first.
+ *
+ * 2. The sticky goes on the `th` cells, and the line under them cannot be the
+ *    cell border: with `border-collapse: collapse` (Table.css) the table
+ *    paints the border, so it stays behind when the cell moves — and
+ *    `box-shadow` does not apply to cells in that model either. So while
+ *    stuck, a pseudo-element in each cell draws the header's own line and
+ *    casts the shadow — see the note on `th::after` below for how the pieces
+ *    are made to read as one edge.
+ *
+ * The offset is the page's top padding (as for the bar) plus the bar's
+ * height, measured into `--cc-listing-bar-h` by ListingScreen.js because the
+ * bar wraps to different heights (49 / 133px) and is absent with nothing
+ * ticked. z-index 1 — under the bar (2), over the rows. */
+.cc-listing .datatables__body {
+  overflow-x: clip;
+}
+
+.cc-listing [data-listing-head] th {
+  position: sticky;
+  inset-block-start: calc(var(--cc-listing-bar-h, 0px) - var(--cc-listing-pad-top));
+  z-index: 1;
+}
+
+/* The shadow is cast by a box the FULL HEIGHT of the cell, the same size of
+ * box the bar casts from, rather than from a 1px line: a shadow's weight
+ * scales with the box casting it, and a 1px box under a 3px blur would read
+ * far lighter than the bar's shadow for the same token.
+ *
+ * Each box overhangs its neighbours by spacing-4 and is clipped back to its
+ * own cell, top and sides, so only the part BELOW the header shows. The
+ * overhang matters: a box's shadow fades towards its own ends, so cell-sized
+ * boxes would leave a light notch at every column seam. Overhung and clipped,
+ * every cell gets the full-strength middle of a wider shadow and the pieces
+ * tile into one edge. The clip reaches spacing-6 below, well past the shadow's
+ * 4px reach. The line is this box's bottom border, clipped the same way. */
+.cc-listing [data-listing-head] th::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline: calc(var(--ao-spacing-4) * -1);
+  border-block-end: 1px solid var(--ao-datatable-table-border);
+  /* No shadow for now (designer, 2026-09-23) — this pseudo-element now only
+   * carries the header's line while stuck. The overhang/clip set-up above is
+   * kept so a shadow can come back as one declaration: `box-shadow`. */
+  clip-path: inset(0 var(--ao-spacing-4) calc(var(--ao-spacing-6) * -1));
+  opacity: 0;
+  transition: opacity var(--ao-transition-default);
+  pointer-events: none;
+}
+
+/* Matches the base rule's specificity plus the state class. As plain
+ * `.cc-listing__head--stuck th::after` it scored (0,1,2) against the base
+ * rule's (0,2,2), lost, and the shadow never appeared at all — the actual
+ * cause of "we need a shadow". Measured: the class was set, opacity stayed 0. */
+.cc-listing [data-listing-head].cc-listing__head--stuck th::after {
+  opacity: 1;
+}
+
+.cc-listing__selection-count {
+  /* The count is a label, not a paragraph — wrapping "2 items selected" onto
+     two lines made the bar taller than the row it describes. */
+  white-space: nowrap;
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fluid-xxs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-primary);
+}
+
+/* Clear — `btn btn--tertiary btn--sm` plus a visible border, the same
+ * contextual override as the account chip on the rows (Case B, designer
+ * 2026-09-23): `--ao-border-secondary`, the line the kebab, the edit pencil
+ * and the chip all use. Tertiary's own border token is transparent in every
+ * mode, and its hover fill is within a couple of points of the bar's
+ * expanded-row tint, so without the line Clear had no edge at all.
+ *
+ * The border is restated for hover and focus because `.btn--tertiary:hover`
+ * sets the transparent hover token at the same specificity — this sheet loads
+ * after Button.css, so it wins on order. */
+.cc-listing__selection-clear,
+.cc-listing__selection-clear:hover,
+.cc-listing__selection-clear:focus-visible {
+  border-color: var(--ao-border-secondary);
+}
+
+.cc-listing__selection-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  /* `flex: 1 1 auto` and not the default `0 1 auto`. A wrapping flex container
+     that is itself a flex ITEM sizes to its min-content, so once the selects
+     below became shrinkable the cluster collapsed to ~341px and wrapped to two
+     rows at 1600 — where it had been one. Letting it take the remaining space
+     puts that back, and it still wraps when there genuinely is not room. */
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin-inline-start: auto;
+  /* Orders carries three selects and a verb; at a narrow column they wrap
+     under the count rather than pushing the bar wider than the table. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* The selects are the Select component at `--sm`; only their width is ours,
+   so "Change Status" and "Add to List" do not each claim a different one.
+   160px is a CAP, not a floor — `flex: 0 1` with `min-inline-size: 0` lets
+   them give way on a phone instead of forcing the bar past the table. */
+.cc-listing__selection-select {
+  flex: 0 1 var(--ao-size-2);               /* 160px */
+  max-inline-size: var(--ao-size-2);
+  min-inline-size: 0;
+}
+
+.cc-listing__selection-select .sel__menu {
+  max-block-size: var(--ao-size-6);         /* 320px */
+  overflow-y: auto;
+}
+
+/* ── No hover, no reveal ──────────────────────────────────
+ *
+ * On a touch device the card's controls were unreachable: they sit at
+ * `opacity: 0` until `:hover`, and the picture is covered by the anchor that
+ * opens the item — so the first tap navigates away and there is no second
+ * one. `:focus-within` rescues the keyboard, not the finger. Nothing in the
+ * grid could be SELECTED on a phone, which also made the selection bar and its
+ * Move/Delete unreachable there (designer, 2026-09-22).
+ *
+ * `(hover: none)` and `(pointer: coarse)` rather than a width breakpoint,
+ * because this is not a question about size. A narrow desktop window still has
+ * a pointer and reveal-on-hover is right there; a tablet at 1100px does not
+ * and it is wrong. CLAUDE.md §4a names device capability as the case a
+ * viewport-level `@media` is actually FOR, and an input-capability query is
+ * that case exactly — a container query cannot ask this question at all.
+ */
+@media (hover: none), (pointer: coarse) {
+  .cc-grid__select,
+  .cc-grid__actions {
+    opacity: 1;
+  }
+}
+
+/* The layout switch sits LAST in the toolbar's actions cluster, so Edit
+ * Columns appearing and disappearing happens to its left and the switch stays
+ * flush right — it used to slide 135px sideways the moment you pressed it. */
+.cc-listing__layout[hidden] { display: none; }
+
+/* Icons only when the column is narrow (designer, 2026-09-22). The toolbar has
+ * to hold a page-size control, a count and this; at 390px the two labels are
+ * the first thing that can go without losing a function.
+ *
+ * `@container`, matching every other responsive rule on this table: the
+ * question is how much room the CONTENT COLUMN has, and a docked SidebarMenu
+ * takes that away with no window resize at all.
+ *
+ * The accessible name does not change — each button carries an `aria-label`,
+ * so hiding the span takes away the visible text and nothing else. Gap goes
+ * with it, or the icon sits off-centre in a box still reserving room for a
+ * label that is not there. */
+@container (max-width: 767px) {
+  /* The actions take their OWN line and start at the left edge (designer,
+     2026-09-22). On a narrow column they were wrapping under the count but
+     keeping `margin-inline-start: auto`, so the select hung off to the right
+     with a ragged gap beneath "2 items selected" — two half-rows reading as
+     one broken one. `flex-basis: 100%` makes the break deliberate instead of
+     incidental, and the auto margin comes off so the row starts where the
+     count does. */
+  /* Tighter inline padding to match the narrow gutters the rest of the table
+     uses down here — 16 to 12, block padding unchanged (designer,
+     2026-09-22). */
+  .cc-listing__selection {
+    padding: var(--ao-spacing-3) var(--ao-spacing-4);
+  }
+
+  /* Two columns down here (designer, 2026-09-22), not a wrapping flex row.
+     Orders' three selects plus Apply made a 3-then-1 row that left a
+     half-empty last line; a grid pairs them 2×2 and gives Articles' single
+     select + Apply one even row. `minmax(0, 1fr)` rather than `1fr` so a long
+     option label cannot push a column past its share. */
+  .cc-listing__selection-actions {
+    flex-basis: 100%;
+    margin-inline-start: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The 160px cap is a desktop measure — in a grid cell it would leave the
+     select short of its own column. */
+  .cc-listing__selection-select {
+    max-inline-size: none;
+  }
+
+  .cc-listing__layout .seg-control__btn-label {
+    display: none;
+  }
+
+  .cc-listing__layout .seg-control__btn {
+    gap: var(--ao-spacing-0);
+  }
+}
+
+@container (max-width: 767px) {
+  .cc-listing__grid {
+    gap: var(--ao-spacing-4);
+    padding: var(--ao-spacing-4);
+  }
+}
+
+/* The selection bar's sticky offset follows the page's top padding, which
+ * drops to spacing-4 below a 768px VIEWPORT (ControlScreen.css). Same @media
+ * as that rule, for the reason given there: the page cannot query its own
+ * container, so its padding is viewport-keyed and this has to match it. */
+@media (max-width: 767px) {
+  .cc-listing {
+    --cc-listing-pad-top: var(--ao-spacing-4);
+  }
+}
+
+/* ── Full-width template (Figma 3788:16762) ───────────────────────────────
+ * The same screen as the standard listing, with the shell spacing and card
+ * chrome taken out "to allow maximum space" (designer, 2026-09-23). Every
+ * behaviour — filters, views, search, column fit, selection, both stickies,
+ * row links, grid view — is shared, because the DOM is identical; only these
+ * rules differ.
+ *
+ * ONE ATTRIBUTE is the whole switch: `data-listing-template="full"` on the
+ * listing root, set by `applyTemplate()` in ListingScreen.js from
+ * `config.template` or `?template=full`. It ships as a separate template type
+ * for now; a runtime toggle later only has to call `applyTemplate` again.
+ * Deliberately NOT `data-layout`, which is taken twice already (Media's
+ * listing/grid switch, and chat minimised mode, which also shrinks fonts).
+ *
+ * Shell values, all from get_design_context on 3788:16762 (no token gaps):
+ *   page          padding 0, fill surface/primary  → .cc-control__page--flush
+ *                 (ControlScreen.css — it is the page's own modifier)
+ *   Frame 1       gap 0
+ *   FilterBar     no radius; bottom stroke border/secondary only
+ *   rows          pt 0 · px spacing-5 · pb spacing-4; no divider between them
+ *   Datatables    radius md kept; bottom stroke only, table border colour
+ * No line under the CC header: `.cc-control__chrome--flush` drops the chrome's
+ * bottom border (designer, 2026-09-23). Chips are FilterItem Rounded=False —
+ * `applyTemplate()` renders them without `filter-item--rounded`.
+ *
+ * CHILD combinators throughout: a Multi Select Table filter picker carries a
+ * `.datatables` of its own inside the FilterBar, and a descendant selector
+ * gave those hidden pickers the flush border too (measured). */
+.cc-listing[data-listing-template="full"] {
+  --cc-listing-pad-top: 0px;
+  gap: 0;
+}
+
+.cc-listing[data-listing-template="full"] > .filter-bar {
+  border: 0;
+  border-block-end: 1px solid var(--ao-border-secondary);
+  border-radius: 0;
+}
+
+.cc-listing[data-listing-template="full"] > .filter-bar > .filter-bar__row {
+  padding: 0 var(--ao-spacing-5) var(--ao-spacing-4);
+}
+
+.cc-listing[data-listing-template="full"] > .filter-bar > .filter-bar__row--top {
+  border-block-end: 0;
+}
+
+.cc-listing[data-listing-template="full"] > .datatables {
+  border: 0;
+  border-block-end: 1px solid var(--ao-datatable-table-border);
+}
+
+/* Orders totals as a flush strip (designer, 2026-10-02): no outer cards, a
+ * rule between the tiles and one beneath, the same as the FilterBar above it.
+ * Inline padding matches the FilterBar rows (spacing-5) so the icon blocks line
+ * up with the filter chips. */
+.cc-listing[data-listing-template="full"] > .cc-listing__totals {
+  gap: 0;
+  border-block-end: 1px solid var(--ao-border-secondary);
+}
+
+.cc-listing[data-listing-template="full"] > .cc-listing__totals > .stat-card {
+  border: 0;
+  border-radius: 0;
+  padding: var(--ao-spacing-4) var(--ao-spacing-5);
+}
+
+.cc-listing[data-listing-template="full"] > .cc-listing__totals > .stat-card + .stat-card {
+  border-inline-start: 1px solid var(--ao-border-secondary);
+}
+
+/* Flush cards cast no shadow (designer, 2026-10-02). */
+.cc-listing[data-listing-template="full"] > .filter-bar,
+.cc-listing[data-listing-template="full"] > .datatables,
+.cc-listing[data-listing-template="full"] > .cc-listing__totals > .stat-card {
+  box-shadow: none;
+}
+
+/* Figma draws this template at desktop only. Below 768px keep the designer's
+ * mobile row padding (spacing-3, FilterBar.css 2026-09-21) on the sides and
+ * bottom, with the full template's flush top. An extrapolation, not a frame —
+ * revisit if a mobile frame is drawn. */
+@container cs-page (max-width: 767px) {
+  .cc-listing[data-listing-template="full"] > .filter-bar > .filter-bar__row {
+    padding: 0 var(--ao-spacing-3) var(--ao-spacing-3);
+  }
+
+  /* Totals strip: stacked, so the divider turns horizontal; sides match the rows. */
+  .cc-listing[data-listing-template="full"] > .cc-listing__totals > .stat-card {
+    padding: var(--ao-spacing-3);
+  }
+
+  .cc-listing[data-listing-template="full"] > .cc-listing__totals > .stat-card + .stat-card {
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--ao-border-secondary);
+  }
+}
+
+/* ── Horizontal scroll mode ───────────────────────────────
+ * `data-overflow="scroll"` is set by ListingScreen.js ONLY while the mode is in force — the user
+ * chose it AND the viewport is ≥1024 AND the layout is listing — so none of this can leak into a
+ * phone or the grid, where the expanding-row fit always applies.
+ *
+ * 1. The body scrolls sideways. This undoes the `overflow-x: clip` above, which existed only so
+ *    the header could stick; a sideways scroller becomes the sticky's scroll container, so the
+ *    header stops sticking here. That is the agreed trade-off, not a bug.
+ * 2. The kebab column goes (designer, 2026-09-29): with every column on screen there is nothing
+ *    left for the row detail to reveal, so the toggle is redundant. Its detail rows go with it.
+ * 3. The empty state stays centred in the VISIBLE area, not across the scrolled width: it pins to
+ *    the scroller's left edge at the scroller's own width (`--cc-listing-view-w`, measured by JS). */
+[data-listing][data-overflow="scroll"] .datatables__body {
+  overflow-x: auto;
+}
+
+[data-listing][data-overflow="scroll"] [data-listing-head] th {
+  position: static;
+}
+
+[data-listing][data-overflow="scroll"] [data-listing-head] th::after {
+  content: none;
+}
+
+[data-listing][data-overflow="scroll"] .datatables__col--kebab,
+[data-listing][data-overflow="scroll"] .datatables__row-detail:not(:has(.datatables__detail-extra)) {
+  display: none;
+}
+
+/* A screen's own detail content (Article Steps' step body) survives scroll mode — Show details
+ * still opens it — and pins to the visible area like the empty state. */
+[data-listing][data-overflow="scroll"] .datatables__detail-extra {
+  position: sticky;
+  inset-inline-start: 0;
+  box-sizing: border-box;
+  max-inline-size: var(--cc-listing-view-w, 100%);
+}
+
+/* The table's first-cell inset would push the pinned block 16px in and past the right edge. */
+[data-listing][data-overflow="scroll"] .cc-listing__empty-cell {
+  padding-inline: 0;
+}
+
+[data-listing][data-overflow="scroll"] .cc-listing__empty {
+  position: sticky;
+  inset-inline-start: 0;
+  box-sizing: border-box;
+  inline-size: var(--cc-listing-view-w, 100%);
+}
+
+/* ── Flag cell (config type `flag`) ──────────────────────
+ * Check for yes, dash for none — the Steps table's Live / Design frame / Lookup, with the same
+ * tokens StepsTable used for them. */
+.cc-listing__flag {
+  display: inline-flex;
+}
+
+.cc-listing__flag [data-lucide],
+.cc-listing__flag svg {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+.cc-listing__flag--on {
+  color: var(--ao-text-success);
+}
+
+.cc-listing__flag--off {
+  color: var(--ao-icon-contrast);
+}

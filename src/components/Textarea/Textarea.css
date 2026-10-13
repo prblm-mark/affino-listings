@@ -1,0 +1,124 @@
+/* Textarea component
+ * Mirrors Input component patterns for form consistency
+ * Variants: Default, Error, Disabled, Small, With char count
+ */
+
+/* ── Container ───────────────────────────────────────── */
+
+.textarea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);             /* 8px */
+}
+
+/* ── Label ───────────────────────────────────────────── */
+
+.textarea__label {
+  display: block;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);   /* 14px */
+  font-weight: var(--ao-font-semibold); /* 600 */
+  line-height: var(--ao-leading-xs);    /* 16px */
+  color: var(--ao-text-primary);
+}
+
+/* ── Control (textarea element) ──────────────────────── */
+
+.textarea__control {
+  width: 100%;
+  min-height: 120px; /* layout dimension — no token match */
+  padding: var(--ao-spacing-4) var(--ao-spacing-5);
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xs);   /* 14px */
+  font-weight: var(--ao-font-regular);  /* 400 */
+  line-height: var(--ao-leading-md);    /* 24px */
+  color: var(--ao-text-primary);
+  resize: vertical;
+  transition: border-color var(--ao-transition-default),
+              box-shadow var(--ao-transition-default);
+}
+
+.textarea__control::placeholder {
+  color: var(--ao-text-contrast);
+}
+
+.textarea__control:hover {
+  border-color: var(--ao-border-brand);
+}
+
+.textarea__control:focus {
+  border-color: var(--ao-border-brand);
+  box-shadow: 0 0 0 1px var(--ao-surface-primary),
+              0 0 0 3px var(--ao-surface-brand-soft);
+  outline: none;
+}
+
+/* ── Help text ───────────────────────────────────────── */
+
+.textarea__help {
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);  /* 12px */
+  font-weight: var(--ao-font-regular);  /* 400 */
+  line-height: var(--ao-leading-xs);    /* 16px */
+  color: var(--ao-text-secondary);
+}
+
+/* ── Footer (char count) ─────────────────────────────── */
+
+.textarea__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.textarea__char-count {
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);  /* 12px */
+  font-weight: var(--ao-font-regular);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-contrast);
+}
+
+/* ── Error state ─────────────────────────────────────── */
+
+.textarea--error .textarea__control {
+  border-color: var(--ao-border-error);
+}
+
+.textarea--error .textarea__control:hover {
+  border-color: var(--ao-border-error);
+}
+
+.textarea--error .textarea__control:focus {
+  border-color: var(--ao-border-error);
+  box-shadow: 0 0 0 1px var(--ao-surface-primary),
+              0 0 0 3px var(--ao-surface-error-soft);
+}
+
+.textarea--error .textarea__help {
+  color: var(--ao-text-error);
+}
+
+/* ── Disabled state ──────────────────────────────────── */
+
+.textarea__control:disabled {
+  background-color: var(--ao-surface-minimal);
+  color: var(--ao-text-contrast);
+  cursor: not-allowed;
+  resize: none;
+}
+
+.textarea:has(.textarea__control:disabled) .textarea__label {
+  opacity: 0.5;
+}
+
+/* ── Size: sm ────────────────────────────────────────── */
+
+.textarea--sm .textarea__control {
+  min-height: 80px; /* layout dimension — no token match */
+  padding: var(--ao-spacing-3) var(--ao-spacing-4);
+  font-size: var(--ao-font-fixed-xxs);  /* 12px */
+}

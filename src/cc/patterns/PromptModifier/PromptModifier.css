@@ -1,0 +1,164 @@
+/* PromptModifier — a record section's AI prompt (Social, Article Questions, Summary).
+ * Tier: Pattern · CODE-FIRST (designer, 2026-09-29) — no Figma node; flagged in the notes.
+ * Composes: Button, Textarea.
+ *
+ * Tinted so it reads as TOOLING that writes the fields below it, not as one of the article's own
+ * fields. One line at rest (title, what it fills, a one-line prompt preview, Edit prompt, Generate);
+ * Edit prompt opens the full prompt.
+ */
+
+.prompt-modifier {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-4);
+  padding: var(--ao-spacing-4);
+  background-color: var(--ao-surface-extra-minimal);   /* designer amend 2026-09-29 (was brand-soft-extra) */
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  /* Self-container: its width tracks the section body (fluid), so its descendants may query it. */
+  container: prompt-modifier / inline-size;
+}
+
+.prompt-modifier__head {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  min-inline-size: 0;
+}
+
+.prompt-modifier__icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--ao-icon-brand);
+}
+
+.prompt-modifier__icon svg {
+  inline-size: var(--ao-icon-size-md);
+  block-size: var(--ao-icon-size-md);
+}
+
+.prompt-modifier__text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-1);
+}
+
+.prompt-modifier__title {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ao-spacing-3);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-2xs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+}
+
+.prompt-modifier__fills {
+  font-size: var(--ao-font-fixed-xxs);
+  font-weight: var(--ao-font-regular);
+  color: var(--ao-text-secondary);
+}
+
+/* One line of the prompt, so the section says what it will ask for without opening it. */
+.prompt-modifier__preview {
+  margin: 0;
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-modifier--open .prompt-modifier__preview { display: none; }
+
+.prompt-modifier__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  flex-shrink: 0;
+}
+
+/* Edit prompt — `btn btn--tertiary btn--sm` plus the subtle `--ao-border-secondary` line the
+ * listing's account chip carries (Case B contextual override, designer 2026-09-29), restated for
+ * hover and focus because `.btn--tertiary:hover` sets the transparent hover border at (0,2,0). */
+.prompt-modifier [data-prompt-toggle],
+.prompt-modifier [data-prompt-toggle]:hover,
+.prompt-modifier [data-prompt-toggle]:focus-visible {
+  border-color: var(--ao-border-secondary);
+}
+
+.prompt-modifier [data-prompt-toggle] svg {
+  transition: transform var(--ao-transition-default);
+}
+
+.prompt-modifier--open [data-prompt-toggle] svg { transform: rotate(180deg); }
+
+/* Busy: the sparkles icon becomes a spinner while the (mock) generation runs. */
+.prompt-modifier--busy [data-prompt-generate] svg {
+  animation: prompt-modifier-spin 0.9s linear infinite;
+}
+
+@keyframes prompt-modifier-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-modifier--busy [data-prompt-generate] svg { animation: none; }
+}
+
+.prompt-modifier__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+}
+
+.prompt-modifier__body[hidden] { display: none; }
+
+.prompt-modifier__body .textarea__control { background-color: var(--ao-surface-primary); }
+
+.prompt-modifier__body-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ao-spacing-3);
+  flex-wrap: wrap;
+}
+
+.prompt-modifier__hint {
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-secondary);
+}
+
+.prompt-modifier__status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-secondary);
+}
+
+.prompt-modifier__status[hidden] { display: none; }
+
+/* A field Generate just wrote, flashed so the eye finds what changed (cleared by the JS). */
+.prompt-modifier-filled { box-shadow: 0 0 0 2px var(--ao-surface-brand-soft); }
+
+/* Narrow: the actions drop under the text on their own row, LEFT-aligned with the title and
+ * preview — indented past the icon by its width + the head gap (designer, 2026-09-29; they were
+ * right-aligned). */
+@container prompt-modifier (max-width: 479px) {
+  .prompt-modifier__head { flex-wrap: wrap; }
+  .prompt-modifier__text { flex-basis: calc(100% - var(--ao-icon-size-md) - var(--ao-spacing-3)); }
+  .prompt-modifier__actions {
+    inline-size: 100%;
+    justify-content: flex-start;
+    padding-inline-start: calc(var(--ao-icon-size-md) + var(--ao-spacing-3));
+  }
+}

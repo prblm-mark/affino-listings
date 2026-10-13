@@ -1,0 +1,106 @@
+/* RecordSection — main-column record card: title header + FieldRows.
+ * View mode: the body is a <dl>. Edit mode: the body is a <div> of edit rows.
+ * Width=Standard: white card. Width=Full: flat, bottom border only.
+ *
+ * Figma: Lus07xi8pPXLN87sQIyrEt · View & Edit page · set 3871:3259
+ */
+
+.record-section {
+  min-width: 0;
+  /* No `overflow: hidden` (2026-09-29): it clipped the MediaMeta details popover on the last
+   * row. Nothing inside paints a background, so the radius needs no clip. */
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+}
+
+.record-section--full {
+  border-width: 0 0 1px;
+  border-radius: var(--ao-radius-none);
+}
+
+.record-section__header {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-4);
+  padding: var(--ao-spacing-5) var(--ao-spacing-6) var(--ao-spacing-5) var(--ao-spacing-5);
+  border-bottom: 1px solid var(--ao-border-secondary);
+}
+
+.record-section__title {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-semibold);
+  font-size: var(--ao-font-fixed-md);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+}
+
+/* Section description (code-first, 2026-10-05; Hub TASK-531782 Q3) — per-section help text a
+ * workflow can set, under the title. Same title-block stack as FactPanel's title + subtitle; the
+ * line is 12px body text rather than the subtitle's 11px because it can run to a full sentence. */
+.record-section__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-0-5);
+  min-width: 0;
+}
+
+.record-section__description {
+  margin: 0;
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-contrast);
+}
+
+.record-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-6);              /* 24px between field rows — designer amend 2026-09-29 (was --ao-spacing-5) */
+  margin: 0;
+  padding: var(--ao-spacing-6);
+}
+
+/* ── Narrow: field rows stack label over value ─────────
+ * Designer-approved 2026-09-28. The section spans the main column, so its own width
+ * tracks the space available (docked menu, widened sidebar, narrow window) — a valid
+ * self-container. 559 = the 192 label + a ~45ch value (the low end of a readable
+ * 45–75ch measure at 14px) + the section's padding. Below it the label sits above its
+ * value at full width. No Figma frame exists for this: the 8px label→value gap is the
+ * DS Input's own label→control gap (`--ao-spacing-3`), so stacked rows read like the
+ * form fields everywhere else. Compact (sidebar) rows are untouched. */
+.record-section {
+  container: record-section / inline-size;
+}
+
+@container record-section (max-width: 559px) {
+  .field-row:not(.field-row--compact) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--ao-spacing-3);
+  }
+
+  .field-row:not(.field-row--compact) .field-row__label {
+    flex-basis: auto;
+  }
+
+  /* The label no longer sits beside a 40px control, so drop the centring offset. */
+  .field-row--edit .field-row__label {
+    padding-top: 0;
+  }
+
+  /* Mobile density (designer amends, 2026-09-29): tighter header/body padding, smaller title. */
+  .record-section__header {
+    padding: var(--ao-spacing-4);
+  }
+
+  .record-section__title {
+    font-size: var(--ao-font-fixed-xs);
+  }
+
+  .record-section__body {
+    padding: var(--ao-spacing-4);
+  }
+}

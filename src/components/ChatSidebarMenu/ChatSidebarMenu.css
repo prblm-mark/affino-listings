@@ -1,0 +1,61 @@
+/* ChatSidebarMenu — context menu dropdown for sidebar chat items */
+
+.chat-sidebar-menu {
+  position: fixed;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  min-width: max-content;
+  padding: var(--ao-spacing-3);
+  border-radius: var(--ao-radius-lg);
+  background: var(--ao-chat-sidebar-hover-bg);
+}
+
+.chat-sidebar-menu--open {
+  display: flex;
+}
+
+/* Shadow — uses token; dark mode override handled by tokens-shadows.css */
+.chat-sidebar-menu {
+  box-shadow: var(--ao-shadow-sm);
+}
+
+/* ── Menu items ─────────────────────────────────────── */
+
+.chat-sidebar-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  width: 100%;
+  min-height: var(--ao-spacing-7);
+  padding: 0 var(--ao-spacing-3);
+  border: none;
+  border-radius: var(--ao-radius-md);
+  background: transparent;
+  color: var(--ao-chat-sidebar-text);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fluid-xxs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-xs);
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  transition: background-color var(--ao-transition-default);
+}
+
+.chat-sidebar-menu__item:hover {
+  background: var(--ao-chat-sidebar-active-bg);
+}
+
+.chat-sidebar-menu__item [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  flex-shrink: 0;
+}
+
+/* ── Focus ──────────────────────────────────────────── */
+
+.chat-sidebar-menu__item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--ao-chat-sidebar-bg), 0 0 0 3px var(--ao-surface-brand-soft);
+}

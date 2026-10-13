@@ -1,0 +1,316 @@
+/* FieldRow — one field on a record screen: label column + value.
+ *
+ * Layout=Wide (main column, 192px label) / Layout=Compact (sidebar, 128px term).
+ * View types:  Text · Tags · Paragraph · Media (MediaMeta)
+ * Edit types:  Input · Select · TagBox · Textarea · Media Picker — the value is
+ *              the real DS control; Required adds the red asterisk.
+ *
+ * View rows are <div class="field-row"> holding <dt>/<dd> inside a <dl>
+ * (RecordSection body / FactList). Edit rows hold <label> + control.
+ *
+ * Figma: Lus07xi8pPXLN87sQIyrEt · View & Edit page · set 3861:1987
+ */
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-5);
+  min-width: 0;
+}
+
+.field-row__label {
+  flex: 0 0 var(--ao-size-3);
+  min-width: 0;
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-semibold);   /* designer amend 2026-09-29 (was medium) */
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-sm);
+  letter-spacing: var(--ao-tracking-4);
+  color: var(--ao-text-primary);   /* designer amend 2026-09-29 (was text-secondary) */
+}
+
+.field-row__value {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.field-row__value p {
+  margin: 0;
+}
+
+.field-row__value p + p {
+  margin-top: var(--ao-leading-md);
+}
+
+/* Type=Tags — wrapping row of Button Tertiary xs links */
+.field-row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-2);
+}
+
+/* Type=Paragraph / Media — multi-line values align to the top */
+.field-row--paragraph,
+.field-row--media {
+  align-items: flex-start;
+}
+
+/* ── Layout=Compact (sidebar) ─────────────────────── */
+
+.field-row--compact {
+  gap: var(--ao-spacing-4);
+}
+
+.field-row--compact .field-row__label {
+  flex-basis: var(--ao-size-1);
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  letter-spacing: normal;
+  color: var(--ao-text-contrast);
+}
+
+.field-row--compact .field-row__value {
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+}
+
+/* ── Edit types ───────────────────────────────────── */
+
+.field-row--edit {
+  align-items: flex-start;
+}
+
+/* Label padding centres the label on the 40px control */
+.field-row--edit .field-row__label {
+  display: flex;
+  gap: var(--ao-spacing-1);
+  padding-top: var(--ao-spacing-4);
+}
+
+.field-row__required {
+  color: var(--ao-text-error);
+}
+
+.field-row--edit .field-row__value {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ══ Code-first row types (Article 10007, 2026-09-29) — NOT in Figma yet, flagged ══════════════
+ * Built to fill the framework with a real article's full field set. Each composes an existing DS
+ * component; only the arrangement below is new, and it reuses the row's own rhythm
+ * (--ao-spacing-3 between a control and its companion, as the edit label/control gap). */
+
+/* Type=Rich (view) — an HTML body: paragraphs, headings, quotes. */
+.field-row__rich > * {
+  margin: 0;
+}
+
+.field-row__rich > * + * {
+  margin-top: var(--ao-spacing-4);
+}
+
+.field-row__rich h2,
+.field-row__rich h3 {
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+}
+
+.field-row__rich h2 {
+  font-size: var(--ao-font-fixed-sm);
+}
+
+.field-row__rich h3 {
+  font-size: var(--ao-font-fixed-xs);
+}
+
+.field-row__rich blockquote {
+  padding-left: var(--ao-spacing-4);
+  border-left: 2px solid var(--ao-border-brand);
+  color: var(--ao-text-secondary);
+}
+
+/* Type=Lookup (edit) — the current value + a Select that opens the picker. */
+.field-row__lookup {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  min-width: 0;
+}
+
+.field-row__lookup > .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Type=Image (edit) — MediaPicker, then its options: alt text, caption, alignment, width. */
+/* A self-container: this block's width tracks the value column it sits in (fluid, not a
+ * fixed box, so a self-query is safe — CLAUDE.md §4a), and that column is what decides whether
+ * the options fit two across. The RecordSection width did not: at a 1459 viewport the section
+ * is ~1000 but a record's value column is ~360, so two columns gave 175px cells and the
+ * Alignment segments overlapped (designer screenshot, 2026-09-29). */
+.field-row__image {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-4);
+  min-width: 0;
+  container: field-image / inline-size;
+}
+
+/* One column by default; two — Alt text | Caption over Alignment | Width (designer, 2026-09-29)
+ * — once the image block itself is ≥560, i.e. every cell ≥ ~272, which is what the labelled
+ * Alignment control needs. Mobile-first min-width, like the tokens' breakpoints. */
+.field-row__image-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ao-spacing-4);
+}
+
+/* No image in the slot → no image options (alt / caption / alignment / width). */
+.field-row__image:has(.media-picker--empty) .field-row__image-options {
+  display: none;
+}
+
+@container field-image (min-width: 560px) {
+  .field-row__image-options:not(.field-row__image-options--single) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.field-row__image-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+  min-width: 0;
+}
+
+
+.field-row__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-5);
+}
+
+/* Alignment — a SegmentedControl (icon + text, designer 2026-09-29; it replaced three radios).
+ * The control is 40px (--ao-spacing-8), the Input / Select height, so it sits level with Width
+ * with no centring rule. It fills its cell and the three segments share it equally. */
+.field-row__align {
+  inline-size: 100%;
+  min-inline-size: 0;
+  container: field-align / inline-size;
+}
+
+/* A segment is never allowed to paint over its neighbour. */
+.field-row__align .seg-control__btn {
+  overflow: hidden;
+}
+
+/* Two narrow tiers, both on the control's own container (only its descendants read it).
+ * Thresholds are CONTENT-box widths — the control's 1px border + 4px padding make that 10px
+ * less than its measured width (feedback: container queries measure the content box).
+ * <270 (≈280 wide): the segments tighten (12 → 6 padding, 8 → 4 icon gap), keeping the labels
+ *      down to ~232 wide — every phone's value column. <222: icon only; the label stays in the
+ *      accessibility tree (visually hidden, not display:none), so each radio keeps its name. */
+@container field-align (max-width: 269px) {
+  .field-row__align .seg-control__btn {
+    padding-inline: var(--ao-spacing-2);
+    gap: var(--ao-spacing-1);
+  }
+}
+
+@container field-align (max-width: 221px) {
+  .field-row__align .seg-control__btn { padding-inline: 0; }
+
+  .field-row__align .seg-control__btn-label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Type=Checkbox (edit) — the box sits on the label's line; no 40px control to centre against. */
+.field-row--check {
+  align-items: center;
+}
+
+.field-row--check .field-row__label {
+  padding-top: 0;
+}
+
+/* ══ Collapsible long values (code-first 2026-10-09) — NOT in Figma yet, flagged ═════════════════
+ * FieldRow.js wraps a long Paragraph / Rich value in `__clamp-body` and adds the toggle; the row only
+ * gets `data-clamped` when the text runs past --field-row-clamp-lines (6 Paragraph, 12 Rich), so
+ * short values render exactly as before. Collapsed: capped at that many lines of the value's own
+ * line height, with the last line faded. The fade is an alpha MASK, not a paint over the text, so it
+ * works on any surface (section, panel, dark) without a gradient colour token.
+ * The toggle is the same Button Secondary xs as the row's other companion buttons ("Image details"),
+ * spaced like them (--ao-spacing-3). */
+.field-row__value[data-clamped]:not([data-expanded]) > .field-row__clamp-body {
+  max-block-size: calc(var(--field-row-clamp-lines) * var(--ao-leading-md));
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, currentColor calc(100% - var(--field-row-clamp-fade, var(--ao-leading-md))), transparent);
+}
+
+/* Rich text has gaps between its paragraphs, so the cut can land in one and a one-line fade would
+   show nothing. Two lines makes sure the fade always crosses some text. */
+.field-row__value:has(> .field-row__clamp-body > .field-row__rich) {
+  --field-row-clamp-fade: calc(var(--ao-leading-md) * 2);
+}
+
+.field-row__clamp-toggle {
+  margin-top: var(--ao-spacing-3);
+}
+
+.field-row__clamp-toggle[hidden] {
+  display: none;
+}
+
+.field-row__clamp-toggle svg {
+  transition: transform var(--ao-transition-default);
+}
+
+.field-row__value[data-expanded] > .field-row__clamp-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* ══ Edit help text — the "Show help" switch (code-first 2026-10-09) — NOT in Figma yet, flagged ═══
+ * Most CC edit screens carry help on nearly every field (Contact: 58 of 60; the Article is the
+ * exception). Every edit row with help has a help line under its control (`.field-row__help`, the
+ * Input help style). On a record screen with `data-help-mode="switch"` the lines are hidden until the
+ * tabs bar's "Show help" switch is on (`data-help-visible`) — Mark's pick of four options compared
+ * on Contact Edit, 2026-10-09 (the others: an info button that reveals or tooltips the line, and
+ * help on focus). Without the mode (ArticleEdit) the line always shows, as before. */
+.field-row__value > .field-row__help {
+  margin-top: var(--ao-spacing-3);   /* the Input's own control → help gap */
+}
+
+[data-help-mode="switch"]:not([data-help-visible]) .field-row__help {
+  display: none;
+}
+
+/* Type=Radio (edit) — DS Radio per option, in one row that wraps (Contact Type, Privacy Level,
+ * Gender; code-first 2026-10-09). Aligned like a checkbox row (`field-row--check`): no 40px control
+ * to centre against. Options sit spacing-5 apart, as the Radio demo spaces them. */
+.field-row__radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-3) var(--ao-spacing-5);
+}
+
+/* A checkbox / radio row with help: centring would put the label midway down the control + help
+   block, so it sits on the control's first line instead. */
+.field-row--check.field-row--has-help {
+  align-items: flex-start;
+}

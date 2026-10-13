@@ -1,0 +1,174 @@
+/* RecordTabs — record screen section tabs (Details / Article steps) with an
+ * optional count badge and optional right-hand actions (Import / + Add).
+ * Tabs are links: each one is a separate screen, so the active tab carries
+ * aria-current="page".
+ *
+ * Width=Standard: white bordered card. Width=Full: flat, bottom border only.
+ *
+ * Figma: Lus07xi8pPXLN87sQIyrEt · View & Edit page
+ *   RecordTab set 3861:1912 (State Default/Active) · RecordTabs set 3871:3246
+ */
+
+.record-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: var(--ao-spacing-5);
+  min-width: 0;
+  padding: var(--ao-spacing-0-5) var(--ao-spacing-5) 0;
+  overflow: hidden;
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+}
+
+.record-tabs--full {
+  border-width: 0 0 1px;
+  border-radius: var(--ao-radius-none);
+}
+
+.record-tabs__list {
+  display: flex;
+  align-items: stretch;
+  gap: var(--ao-spacing-5);
+  min-width: 0;
+  /* Overflow navigation (designer, 2026-10-02): when the tabs don't fit, the list scrolls
+   * sideways instead of clipping, by swipe (native), mouse drag / wheel and keyboard focus
+   * (RecordTabs.js). No visible scrollbar: the bar is too short for one, and drag is the cue. */
+  flex: 0 1 auto;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.record-tabs__list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Only while there is somewhere to drag to. */
+.record-tabs__list--scrollable {
+  cursor: grab;
+}
+
+.record-tabs__list--dragging,
+.record-tabs__list--dragging .record-tab {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.record-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  padding: var(--ao-spacing-5) 0;
+  border-bottom: 2px solid transparent;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-contrast);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Tabs are links, but base.css underlines a:hover — tabs never underline (designer) */
+.record-tab:hover {
+  text-decoration: none;
+}
+
+.record-tab--active {
+  border-bottom-color: var(--ao-border-brand);
+  color: var(--ao-text-brand);
+  font-weight: var(--ao-font-semibold);   /* designer amend 2026-09-29 (was medium, as the rest) */
+}
+
+.record-tab:focus-visible {
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: 2px;
+}
+
+.record-tab__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--ao-spacing-6);
+  padding: 0 var(--ao-spacing-2);
+  border-radius: var(--ao-radius-full);
+  background-color: var(--ao-surface-info-soft);
+  font-weight: var(--ao-font-semibold);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-info);
+}
+
+.record-tabs__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  margin-left: auto;
+}
+
+/* "Show sidebar" switch — far right of the tabs on View / Edit (designer, 2026-09-29; code-first,
+ * flag for Figma). DS Toggle xxs + label, dressed exactly like the Steps table's "Show details".
+ * Desktop only: below the 1024 page width the sidebar stacks under the content (RecordScreen.css),
+ * so there is nothing to hide and the switch goes. */
+.record-tabs__sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-secondary);
+  white-space: nowrap;
+}
+
+@container cs-page (max-width: 1023px) {
+  .record-tabs__sidebar-toggle {
+    display: none;
+  }
+}
+
+/* Mobile (designer, 2026-09-30): the tabs, Import and + Add did not fit one row at ~390 and ran
+ * into each other. Import goes (it stays reachable on a wider screen) and + Add becomes the sm
+ * icon-only square (Button's own .btn--icon.btn--sm size); aria-label keeps its name. cs-page,
+ * not a self-query: the bar's own padding + actions are what have to fit the page. */
+@container cs-page (max-width: 767px) {
+  /* Tighter bar on mobile (designer amend, 2026-09-30): gap spacing-3, side padding spacing-4
+   * (desktop spacing-5 / spacing-5). */
+  .record-tabs {
+    gap: var(--ao-spacing-3);
+    padding: var(--ao-spacing-0-5) var(--ao-spacing-4) 0;
+  }
+
+  .record-tabs__list {
+    gap: var(--ao-spacing-3);   /* between the tabs; desktop spacing-5 */
+  }
+
+  .record-tab {
+    font-size: var(--ao-font-fixed-2xs);   /* designer amend, 2026-09-30; desktop xs */
+  }
+
+  .record-tabs__import {
+    display: none;
+  }
+
+  /* Any tab action with an icon + a label wrapper (+ Add; Cancel / Save on the form screens)
+   * becomes the sm icon-only square. */
+  .record-tabs__actions .btn:has(> .record-tabs__btn-label) {
+    width: var(--ao-spacing-7);
+    padding: 0;
+    gap: 0;
+  }
+
+  .record-tabs__btn-label {
+    display: none;
+  }
+}
+
+/* "Show help" switch (Contact Edit, 2026-10-09; code-first): at every width — unlike Show sidebar
+ * there is always help to show. */
+@container cs-page (max-width: 1023px) {
+  .record-tabs__help-toggle {
+    display: inline-flex;
+  }
+}

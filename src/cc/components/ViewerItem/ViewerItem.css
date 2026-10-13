@@ -1,0 +1,88 @@
+/* ViewerItem — one recent viewer: Avatar, name, role, time since the view,
+ * and company chips (Button Tertiary xs links).
+ *
+ * Figma: Lus07xi8pPXLN87sQIyrEt · View & Edit page · component 3865:1977
+ */
+
+.viewer-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ao-spacing-4);
+  min-width: 0;
+  padding: var(--ao-spacing-4);
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  /* No shadow (designer, 2026-10-02): it sits inside a FactPanel that now carries
+   * shadow/2xs itself. Figma 3865:1977 still binds shadow/2xs, so drop it there too. */
+}
+
+.viewer-item__body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--ao-spacing-2);              /* 6px — designer amend 2026-09-29 (was --ao-spacing-4) */
+  min-width: 0;
+}
+
+.viewer-item__identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ao-spacing-2);
+}
+
+.viewer-item__who {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--ao-spacing-0-5);
+  min-width: 0;
+}
+
+.viewer-item__name,
+.viewer-item__role,
+.viewer-item__time {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  line-height: var(--ao-leading-xs);
+}
+
+.viewer-item__name {
+  font-weight: var(--ao-font-bold);
+  font-size: var(--ao-font-fixed-2xs);
+  color: var(--ao-text-primary);
+}
+
+/* The name links to the contact, but it is a name, not a call to action: it keeps the text
+ * colour (base.css paints every <a> brand teal) and only underlines on hover. Brand-coloured
+ * links are reserved for CTA links (designer, Hub TASK-531782, 2026-10-07). */
+.viewer-item__name a,
+.viewer-item__name a:hover {
+  color: inherit;
+}
+
+.viewer-item__role {
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-contrast);
+}
+
+.viewer-item__time {
+  flex-shrink: 0;
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-5xs);
+  color: var(--ao-text-contrast);
+  white-space: nowrap;
+}
+
+.viewer-item__companies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ao-spacing-2);
+}
+
+/* Customer Signals — an AvatarGroup (src/components/AvatarGroup, Figma 4057:2759) under the
+ * company chips: one horizontal row of overlapping circles + "+N", never a vertical stack. */
+.viewer-item__signals {
+  align-self: flex-start;
+}

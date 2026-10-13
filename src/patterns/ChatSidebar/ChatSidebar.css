@@ -1,0 +1,94 @@
+/* ChatSidebar — sidebar navigation panel for chat UI */
+
+.chat-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: var(--ao-size-5);
+  height: 100%;
+  padding: var(--ao-spacing-4);
+  gap: var(--ao-spacing-4);
+  background-color: var(--ao-chat-sidebar-bg);
+  border-right: 1px solid var(--ao-border-secondary);
+}
+
+/* ── Logo area ──────────────────────────────────────── */
+
+.chat-sidebar__logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ao-spacing-5) 0;
+  flex-shrink: 0;
+}
+
+.chat-sidebar__logo img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  transition: filter var(--ao-transition-default);
+}
+
+/* Dark sidebar: make logo white */
+[data-sidebar-theme="dark"] .chat-sidebar__logo img {
+  filter: brightness(0) invert(1);
+}
+
+/* Light sidebar: keep original brand color */
+[data-sidebar-theme="light"] .chat-sidebar__logo img {
+  filter: none;
+}
+
+/* ── Actions (New Chat, Search) ─────────────────────── */
+
+.chat-sidebar__actions {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* ── Sections container (scrollable) ────────────────── */
+
+.chat-sidebar__sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-5);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: var(--ao-chat-sidebar-active-bg) transparent;
+  scrollbar-width: thin;
+}
+
+.chat-sidebar__sections::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-sidebar__sections::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-sidebar__sections::-webkit-scrollbar-thumb {
+  background-color: var(--ao-chat-sidebar-active-bg);
+  border-radius: var(--ao-radius-full);
+}
+
+/* ── Individual section (Pinned, Recent, Older…) ─────── */
+
+.chat-sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* ── Section label ──────────────────────────────────── */
+
+.chat-sidebar__section-label {
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);
+  font-weight: var(--ao-font-regular);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-chat-sidebar-text);
+  opacity: 0.6;
+  padding: var(--ao-spacing-2) var(--ao-spacing-3);
+}

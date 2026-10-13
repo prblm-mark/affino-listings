@@ -1,0 +1,105 @@
+/* FontSizeSlider — small 4-step (S/M/L/XL) range slider for CC contexts
+ *
+ * Figma:
+ *   Light — node 4146:6685
+ *   Dark  — node 4146:6687
+ *   File  — ETKqleZdpertwFEo40YB5n (Affino CC Hybrid)
+ *
+ * Standalone build (not a wrapper around RangeSlider) — the markup is
+ * small enough (single native input + styled thumb pseudo-element) that
+ * a dedicated implementation is cleaner than overriding most of `.rs`.
+ * Theme is handled via existing [data-theme] + [data-brand="cc"]
+ * cascade — one stylesheet covers light and dark.
+ */
+
+/* ── Wrapper ─────────────────────────────────────────── */
+
+.font-size-slider {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--ao-spacing-8);
+  padding: 0 var(--ao-spacing-4);
+  background-color: var(--cc-actions-menu-primary-bg);
+  border-radius: var(--ao-radius-md);
+  /* Width is intrinsic: inner input (--ao-size-1 = 128px) + horizontal
+   * padding (var(--ao-spacing-4) × 2 = 24px) = 152px, matching Figma. */
+}
+
+/* ── Track + thumb ───────────────────────────────────── */
+
+.font-size-slider__input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: var(--ao-size-1);
+  height: var(--ao-spacing-3);
+  margin: 0;
+  background-color: var(--cc-actions-menu-secondary-bg);
+  border-radius: var(--ao-radius-full);
+  outline: none;
+  cursor: pointer;
+  /* Filled portion painted by JS via background-image gradient */
+}
+
+/* Webkit thumb */
+.font-size-slider__input::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  background-color: var(--ao-surface-brand);
+  border: 2px solid var(--cc-actions-menu-secondary-bg);
+  border-radius: var(--ao-radius-full);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: grab;
+  transition: transform var(--ao-transition-default);
+}
+
+.font-size-slider__input:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+/* Firefox thumb */
+.font-size-slider__input::-moz-range-thumb {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  background-color: var(--ao-surface-brand);
+  border: 2px solid var(--cc-actions-menu-secondary-bg);
+  border-radius: var(--ao-radius-full);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: grab;
+  transition: transform var(--ao-transition-default);
+}
+
+.font-size-slider__input:active::-moz-range-thumb {
+  cursor: grabbing;
+}
+
+/* Firefox-native filled track (Webkit uses JS-painted gradient) */
+.font-size-slider__input::-moz-range-progress {
+  height: var(--ao-spacing-3);
+  background-color: var(--ao-surface-brand);
+  border-radius: var(--ao-radius-full);
+}
+
+.font-size-slider__input::-moz-range-track {
+  height: var(--ao-spacing-3);
+  background-color: var(--cc-actions-menu-secondary-bg);
+  border-radius: var(--ao-radius-full);
+}
+
+/* Focus ring on thumb */
+.font-size-slider__input:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1),
+              0 0 0 4px var(--ao-surface-brand-soft);
+}
+
+.font-size-slider__input:focus-visible::-moz-range-thumb {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1),
+              0 0 0 4px var(--ao-surface-brand-soft);
+}
+
+/* Suppress base.css global :focus-visible outline (handled via thumb halo) */
+.font-size-slider__input:focus-visible {
+  outline: none;
+}

@@ -1,0 +1,45 @@
+@media (max-width: 639px) {
+  :root {
+    --ao-font-fixed-6xs: 0.5625rem;
+    --ao-font-fixed-5xs: 0.625rem;
+    --ao-font-fixed-4xs: 0.6875rem;
+    --ao-font-fixed-3xs: 0.75rem;
+    --ao-font-fixed-xxs: 0.75rem;
+    --ao-font-fixed-2xs: 0.8125rem;
+    --ao-font-fixed-xs: 0.875rem;
+    --ao-font-fixed-sm: 1rem;
+    --ao-font-fixed-md: 1.125rem;
+    --ao-font-fixed-lg: 1.25rem;
+    --ao-font-fixed-xl: 1.375rem;
+    --ao-font-fixed-2xl: 1.625rem;
+    --ao-font-fixed-3xl: 1.75rem;
+    --ao-font-fixed-4xl: 2rem;
+    --ao-font-fixed-5xl: 2.25rem;
+    --ao-font-fixed-6xl: 3rem;
+    --ao-font-fixed-7xl: 3.75rem;
+    --ao-font-fixed-8xl: 4.5rem;
+    --ao-font-fluid-xxs: 0.75rem;
+    --ao-font-fluid-xs: 0.875rem;
+    --ao-font-fluid-sm: 0.875rem;
+    --ao-font-fluid-md: 1rem;
+    --ao-font-fluid-lg: 1.125rem;
+    --ao-font-fluid-xl: 1.25rem;
+    --ao-font-fluid-2xl: 1.5rem;
+    --ao-font-fluid-3xl: 1.625rem;
+    --ao-font-fluid-4xl: 1.875rem;
+    --ao-leading-none: 1;
+    --ao-leading-xs: 1rem;
+    --ao-leading-sm: 1.25rem;
+    --ao-leading-md: 1.5rem;
+    --ao-leading-lg: 2rem;
+    --ao-leading-xl: 2.5rem;
+    --ao-leading-2xl: 3rem;
+    --ao-tracking-1: -0.05em;
+    --ao-tracking-2: -0.025em;
+    --ao-tracking-3: -0.0125em;
+    --ao-tracking-4: 0em;
+    --ao-tracking-5: 0.0125em;
+    --ao-tracking-6: 0.025em;
+    --ao-tracking-7: 0.05em;
+  }
+}

@@ -1,0 +1,464 @@
+/* ChatMain — scrollable chat content area with multi-view support
+ * Figma node: 2139:2759
+ * Tier: Pattern
+ * Views: Initial (welcome), Processing (ChatResponse), Response (full answer)
+ * Composes: MessageBubble, MessageInput, SuggestedQuestion, WorkingIntro, SourcesCarousel, Skeleton, Button, Tooltip
+ */
+
+/* ── Outer wrapper ────────────────────────────────────── */
+
+.chat-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background-color: var(--ao-surface-primary);
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEW STATE VISIBILITY
+   ══════════════════════════════════════════════════════════ */
+
+/* Initial view: show welcome, hide scroll area */
+.chat-main--initial .chat-main__initial { display: flex; }
+.chat-main--initial .chat-main__scroll { display: none; }
+
+/* Processing + Response views: hide welcome, show scroll area */
+.chat-main--processing .chat-main__initial,
+.chat-main--response .chat-main__initial { display: none; }
+.chat-main--processing .chat-main__scroll,
+.chat-main--response .chat-main__scroll { display: flex; }
+
+/* Processing view: show processing components, hide final response prose */
+.chat-main--processing .chat-main__processing { display: block; }
+.chat-main--processing .chat-main__response { display: none; }
+
+/* Response view: hide processing components, show final response prose */
+.chat-main--response .chat-main__processing { display: none; }
+.chat-main--response .chat-main__response { display: block; }
+
+/* ══════════════════════════════════════════════════════════
+   INITIAL VIEW — Welcome screen
+   ══════════════════════════════════════════════════════════ */
+
+.chat-main__initial {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.chat-main__initial-inner {
+  width: 100%;
+  max-width: var(--ao-size-11);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-6);
+  padding: var(--ao-spacing-8) 0;
+}
+
+@media (min-width: 640px) {
+  .chat-main__initial-inner {
+    gap: var(--ao-spacing-5);
+    padding: var(--ao-spacing-8) var(--ao-spacing-6);
+  }
+}
+
+/* ── Intro: title + subtitle ──────────────────────────── */
+
+.chat-main__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ao-spacing-3);
+  padding: 0 var(--ao-spacing-5) 0;
+}
+
+@media (min-width: 640px) {
+  .chat-main__intro {
+    gap: var(--ao-spacing-5);
+    padding: 0 0 var(--ao-spacing-5);
+  }
+}
+
+.chat-main__title {
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-bold);
+  font-size: var(--ao-font-fixed-xl);
+  line-height: var(--ao-leading-lg);
+  color: var(--ao-text-primary);
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .chat-main__title {
+    font-size: var(--ao-font-fixed-3xl);
+    line-height: var(--ao-leading-xl);
+  }
+}
+
+.chat-main__subtitle {
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-xs);
+  line-height: 1.5;
+  color: var(--ao-text-contrast);
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .chat-main__subtitle {
+    font-size: var(--ao-font-fixed-sm);
+  }
+}
+
+@media (min-width: 768px) {
+  .chat-main__subtitle {
+    font-size: var(--ao-font-fixed-md);
+  }
+}
+
+/* ── Input wrapper (inline in initial view, not sticky) ── */
+
+.chat-main__input-wrap {
+  width: 100%;
+  padding: 0 var(--ao-spacing-5);
+}
+
+@media (min-width: 640px) {
+  .chat-main__input-wrap {
+    padding: 0;
+  }
+}
+
+/* ── Suggestions grid ─────────────────────────────────── */
+
+.chat-main__suggestions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--ao-spacing-4);
+  width: 100%;
+  padding: 0 var(--ao-spacing-5);
+}
+
+@media (min-width: 640px) {
+  .chat-main__suggestions {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--ao-spacing-5);
+    padding: 0;
+  }
+}
+
+/* Mobile: hide third suggested question (Figma mobile shows only 2) */
+.chat-main__suggestions .suggested-question:nth-child(3) {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .chat-main__suggestions .suggested-question:nth-child(3) {
+    display: flex;
+  }
+}
+
+.chat-main__feedback {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  letter-spacing: 0.12px;
+  color: var(--ao-text-contrast);
+  margin: 0;
+  font-feature-settings: 'case' 1;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SCROLL AREA — Processing + Response views
+   ══════════════════════════════════════════════════════════ */
+
+.chat-main__scroll {
+  --_scroll-track: color-mix(in srgb, var(--ao-surface-primary) 94%, rgb(38 55 88));
+  --_scroll-thumb: color-mix(in srgb, var(--ao-surface-primary) 82%, rgb(38 55 88));
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  scrollbar-color: var(--_scroll-thumb) var(--_scroll-track);
+  scrollbar-width: auto;
+}
+
+[data-theme="dark"] .chat-main__scroll {
+  --_scroll-track: color-mix(in srgb, var(--ao-surface-primary) 95%, white);
+  --_scroll-thumb: color-mix(in srgb, var(--ao-surface-primary) 80%, white);
+}
+
+.chat-main__scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-main__scroll::-webkit-scrollbar-track {
+  background: var(--_scroll-track);
+}
+
+.chat-main__scroll::-webkit-scrollbar-thumb {
+  background-color: var(--_scroll-thumb);
+  border-radius: var(--ao-radius-full);
+}
+
+/* ── Centered container ───────────────────────────────── */
+
+.chat-main__container {
+  width: 100%;
+  max-width: var(--ao-size-11);
+  padding: var(--ao-spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-8);
+  flex: 1 0 auto;
+  min-height: min-content;
+}
+
+@media (min-width: 640px) {
+  .chat-main__container {
+    padding: var(--ao-spacing-8) var(--ao-spacing-6);
+  }
+}
+
+
+/* ── Response prose ───────────────────────────────────── */
+
+.chat-main__response {
+  width: 100%;
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fluid-xs);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-primary);
+  font-feature-settings: 'case' 1;
+}
+
+@media (min-width: 640px) {
+  .chat-main__response {
+    font-size: var(--ao-font-fluid-sm);
+  }
+}
+
+.chat-main__response p,
+.chat-main__response ul,
+.chat-main__response ol,
+.chat-main__response li,
+.chat-main__response strong,
+.chat-main__response b,
+.chat-main__response span {
+  color: var(--ao-text-primary);
+}
+
+.chat-main__response p {
+  margin: 0 0 var(--ao-leading-md);
+}
+
+.chat-main__response p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-main__response strong,
+.chat-main__response b {
+  font-weight: var(--ao-font-medium);
+}
+
+.chat-main__response ul {
+  list-style: disc;
+  margin: 0 0 var(--ao-leading-md);
+  padding-left: var(--ao-spacing-6);
+}
+
+.chat-main__response ul:last-child {
+  margin-bottom: 0;
+}
+
+.chat-main__response li {
+  margin-bottom: var(--ao-spacing-4);
+}
+
+.chat-main__response li:last-child {
+  margin-bottom: 0;
+}
+
+.chat-main__response .quick-links {
+  margin-bottom: var(--ao-spacing-6);
+}
+
+/* ── Response subheadings ────────────────────────────── */
+
+.chat-main__response h3 {
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-semibold);
+  font-size: inherit;
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-primary);
+  margin: 0;
+  font-feature-settings: 'case' 1;
+}
+
+/* ── Inline link annotations ─────────────────────────── */
+
+.chat-main__response a:not(.sources-link) {
+  color: var(--ao-text-primary);
+  font-weight: var(--ao-font-medium);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 4px;
+  white-space: nowrap;
+}
+
+.chat-main__response a:not(.sources-link) [data-lucide] {
+  display: inline-block;
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  vertical-align: middle;
+  margin-left: var(--ao-spacing-1);
+  color: var(--ao-icon-secondary);
+}
+
+.chat-main__response a:not(.sources-link):hover {
+  color: var(--ao-text-secondary);
+}
+
+/* ── Inline code badge ───────────────────────────────── */
+
+.chat-main__response code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px var(--ao-spacing-1);
+  background: var(--ao-surface-contrast);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-sm);
+  font-family: 'Dank Mono', monospace;
+  font-size: var(--ao-font-fixed-xs);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+  letter-spacing: var(--ao-tracking-3);
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+@media (min-width: 640px) {
+  .chat-main__response code {
+    font-size: var(--ao-font-fixed-sm);
+  }
+}
+
+/* ── Table spacing inside response ───────────────────── */
+
+.chat-main__response .chat-response-table-scroll {
+  margin-bottom: var(--ao-spacing-6);
+}
+
+/* ── Feedback / response actions ─────────────────────── */
+
+.chat-main__response-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Footer: fade + sticky input ──────────────────────── */
+
+.chat-main__footer {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.chat-main__fade {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--ao-size-11);
+  height: calc(100% + var(--ao-spacing-8));
+  background: var(--ao-gradient-surface-primary);
+  pointer-events: none;
+}
+
+.chat-main__input {
+  width: 100%;
+  max-width: var(--ao-size-11);
+  padding: 0 var(--ao-spacing-2);
+  background-color: var(--ao-surface-primary);
+  pointer-events: auto;
+}
+
+@media (min-width: 768px) {
+  .chat-main__input {
+    padding: 0;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   PROCESSING VIEW — ChatResponse components
+   ══════════════════════════════════════════════════════════ */
+
+.chat-main__processing {
+  width: 100%;
+}
+
+.chat-main__processing .sources-carousel {
+  margin-top: var(--ao-spacing-5);
+  display: none;
+}
+
+.chat-main__processing .chat-response__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-6);
+  margin-top: var(--ao-spacing-6);
+}
+
+@media (min-width: 640px) {
+  .chat-main__processing .chat-response__skeletons {
+    margin-top: var(--ao-spacing-8);
+  }
+}
+
+.chat-main__processing .chat-response__answer {
+  margin-top: var(--ao-spacing-6);
+  opacity: 0;
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .chat-main__processing .chat-response__answer {
+    margin-top: var(--ao-spacing-7);
+  }
+}
+
+.chat-main__processing .chat-response__answer p {
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fluid-xs);
+  color: var(--ao-text-primary);
+  line-height: var(--ao-leading-md);
+  margin: 0 0 var(--ao-spacing-5);
+}
+
+@media (min-width: 640px) {
+  .chat-main__processing .chat-response__answer p {
+    font-size: var(--ao-font-fluid-sm);
+  }
+}

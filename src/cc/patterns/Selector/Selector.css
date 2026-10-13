@@ -1,0 +1,517 @@
+/* Selector — the record screens' four pickers, one pattern.
+ * Tier: Pattern · CODE-FIRST (designer, 2026-09-29) — no Figma node yet, flagged in the notes.
+ *
+ *   data-selector="single"  Section / Creator — click a row to choose it and close
+ *   data-selector="multi"   Multi Display / Topics / Countries / Authors — the FilterDropdowns
+ *                           Multi Select Modal (TagBox owns Apply); this file adds search + count
+ *   data-selector="media"   Thumbnail / Main Image — the Media Items grid as a one-pick picker
+ *   data-selector="sort"    Sort Order — drag, ↑ ↓, ⤒ ⤓ or a typed position
+ *
+ * Composes: Modal (overlay, header, footer, .modal__scroll), FilterDropdowns (facet row, 960
+ * modal width, table region), FilterItem, SearchInput (--sm), Datatables + Table, Button, Badge,
+ * Checkbox. Everything here is what those do not already say.
+ */
+
+/* ── Shared ───────────────────────────────────────────── */
+
+/* The search leads the facet row and takes the room the facets leave. A cap, not a floor
+ * (CLAUDE.md §4a), so a narrow modal wraps the facets under it instead of overflowing. */
+.selector__search {
+  flex: 1 1 var(--ao-size-5);
+  max-inline-size: var(--ao-size-7);
+  min-inline-size: 0;
+}
+
+/* Mixed-height controls (search, facet pills, a checkbox, a button) share one centre line. */
+.selector__toolbar { align-items: center; }
+
+.selector__footer {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* The count / current choice sits left of the buttons and takes the slack. */
+.selector__status {
+  margin-inline-end: auto;
+  min-inline-size: 0;
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-2xs);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ao-spacing-3);
+  margin: 0;
+  padding: var(--ao-spacing-7) var(--ao-spacing-5);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-secondary);
+}
+
+.selector__empty[hidden] { display: none; }
+
+/* Media's no-results state carries the one PRIMARY Upload (designer, 2026-09-29): when nothing
+ * matches, uploading is the way forward. The toolbar's Upload stays secondary, because the
+ * modal's primary is Use image. Stacked: icon, message, action. */
+.selector__empty--action {
+  flex-direction: column;
+  text-align: center;
+}
+
+.selector__empty-text { margin: 0; }
+
+.selector__empty svg,
+.selector__hint svg {
+  inline-size: var(--ao-icon-size-sm);
+  block-size: var(--ao-icon-size-sm);
+  color: var(--ao-icon-contrast);
+  flex-shrink: 0;
+}
+
+/* Rows a search has filtered out. */
+[data-selector] [data-selector-item][hidden],
+[data-selector] tbody tr[hidden] { display: none; }
+
+/* A scroll region that is the modal's growable middle: the modal caps its own height at the
+ * overlay (Modal.css), so this absorbs the difference and scrolls. */
+/* A FIXED preferred height, not a max: a search or facet that leaves one row would otherwise
+ * collapse the modal around it — the dialog jumps while typing, and an open facet panel (which
+ * hangs over the results) is clipped by the modal's own overflow. Still shrinks on a short
+ * viewport (flex-shrink + min 0 inside the modal's 100% height cap). */
+.selector__region {
+  flex: 1 1 var(--ao-size-10);
+  min-block-size: 0;
+}
+
+/* The same for the table pickers (single + multi): FilterDropdowns caps the region at 384;
+ * this makes 384 its height too. */
+[data-selector] .filter-dropdowns__table-region {
+  flex: 1 1 var(--ao-size-7);
+  block-size: var(--ao-size-7);
+  min-block-size: 0;
+}
+
+.selector__live {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Facet panel — a FilterDropdowns Multi Select card hung under its FilterItem chip. Inside the
+ * modal, so it layers over the results region rather than the page (the modal is its own
+ * stacking context via the overlay). */
+[data-selector] [data-selector-facet] { position: relative; }
+
+/* Own width: FilterDropdowns caps a card at `max-width: 100%`, and an absolutely positioned
+ * card's containing block is the CHIP — so the panel shrank to the chip (~120px), wrapped every
+ * label and pushed the counts under them (designer screenshot, 2026-09-29). 280, and never wider
+ * than the modal; Selector.js nudges it left if it would cross the modal's right edge. */
+.selector__facet-panel {
+  position: absolute;
+  inset-block-start: calc(100% + var(--ao-spacing-2));
+  inset-inline-start: 0;
+  z-index: 2;
+  inline-size: var(--ao-size-5);
+  max-inline-size: none;
+  cursor: default;
+}
+
+/* One line per value: the name ellipsises, the count stays. */
+.selector__facet-list .checkbox { display: flex; min-inline-size: 0; }
+.selector__facet-list .checkbox__label-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector__facet-list .checkbox__label {
+  display: flex;
+  flex-direction: row;
+  flex: 1 1 auto;
+  align-items: baseline;
+  min-inline-size: 0;
+  gap: var(--ao-spacing-3);
+  inline-size: 100%;
+}
+
+/* How many rows each value would leave — so a facet never offers an empty result blind. */
+.selector__facet-count {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-size: var(--ao-font-fixed-xxs);
+  color: var(--ao-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Single ───────────────────────────────────────────── */
+
+.selector__row { cursor: pointer; }
+
+.selector__row:hover td { background-color: var(--ao-surface-minimal); }
+
+/* The name cell's button is what a keyboard reaches; the row is the pointer's shortcut. */
+.selector__pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--ao-font-semibold);
+  color: var(--ao-text-primary);
+  text-align: start;
+  cursor: pointer;
+}
+
+.selector__pick:focus-visible {
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: 2px;
+  border-radius: var(--ao-radius-sm);
+}
+
+/* The tick holds its space on every row so names line up whether or not they are chosen. */
+.selector__tick {
+  inline-size: var(--ao-icon-size-sm);
+  block-size: var(--ao-icon-size-sm);
+  color: var(--ao-icon-brand);
+  visibility: hidden;
+  flex-shrink: 0;
+}
+
+.selector__row--selected td { background-color: var(--ao-surface-brand-soft-extra); }
+.selector__row--selected .selector__tick { visibility: visible; }
+
+/* Paired columns (Article step lookup, 2026-09-30): both are long free text, so neither may
+ * push the other out of the modal. Equal halves, and both wrap (Table's cells are nowrap). */
+.selector__table--pair { table-layout: fixed; inline-size: 100%; }
+.table.selector__table--pair thead th,
+.table.selector__table--pair tbody td { inline-size: 50%; white-space: normal; overflow-wrap: anywhere; }
+.selector__table--pair .selector__pick { max-inline-size: 100%; }
+
+/* ── Media ────────────────────────────────────────────── */
+
+.selector--media.modal { width: var(--ao-size-12); }
+
+.selector__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--ao-size-1), 1fr));
+  gap: var(--ao-spacing-5);
+  margin: 0;
+  padding: var(--ao-spacing-5);
+  list-style: none;
+}
+
+.selector__tile-item { min-inline-size: 0; }
+
+.selector__tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* Square, like the Media Items grid (cc-grid__media): a mixed-ratio grid is a ragged grid. */
+.selector__tile-media {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  background-color: var(--ao-surface-secondary);
+  overflow: hidden;
+  transition: border-color var(--ao-transition-default), box-shadow var(--ao-transition-default);
+}
+
+.selector__tile-media img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+/* A document has no picture: its family glyph, centred in the square. */
+.selector__tile-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  block-size: 100%;
+  color: var(--ao-icon-contrast);
+}
+
+.selector__tile-glyph svg {
+  inline-size: var(--ao-icon-size-xl);
+  block-size: var(--ao-icon-size-xl);
+}
+
+.selector__tile:hover .selector__tile-media { border-color: var(--ao-border-brand); }
+
+.selector__tile:focus-visible { outline: none; }
+.selector__tile:focus-visible .selector__tile-media {
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: 2px;
+}
+
+.selector__tile[aria-pressed="true"] .selector__tile-media {
+  border-color: var(--ao-border-brand);
+  box-shadow: 0 0 0 1px var(--ao-border-brand);
+}
+
+/* The selected badge. A brand disc holding the check, in the PRIMARY BUTTON's own label colour
+ * — the approved on-brand pairing in every theme. It was `--ao-text-contrast` (the placeholder
+ * grey) with padding on the SVG itself, which shrank the tick to ~12px and left a plain teal dot
+ * on a photo (designer screenshot, 2026-09-29). The ring in the card colour separates it from
+ * any image behind it. */
+.selector__tile-check {
+  position: absolute;
+  inset-block-start: var(--ao-spacing-2);
+  inset-inline-end: var(--ao-spacing-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ao-spacing-6);
+  block-size: var(--ao-spacing-6);
+  border-radius: var(--ao-radius-full);
+  background-color: var(--ao-surface-brand);
+  box-shadow: 0 0 0 2px var(--ao-surface-primary);
+  color: var(--ao-btn-primary-text);
+  opacity: 0;
+  transition: opacity var(--ao-transition-default);
+}
+
+.selector__tile-check svg {
+  inline-size: var(--ao-icon-size-sm);
+  block-size: var(--ao-icon-size-sm);
+  stroke-width: 3;
+}
+
+.selector__tile[aria-pressed="true"] .selector__tile-check { opacity: 1; }
+
+.selector__tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-1);
+  min-inline-size: 0;
+}
+
+.selector__tile-name,
+.selector__tile-meta {
+  font-family: var(--ao-font-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector__tile-name {
+  font-size: var(--ao-font-fixed-2xs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+}
+
+.selector__tile-meta {
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-secondary);
+}
+
+.selector__mine { flex: 0 0 auto; }
+
+.selector__more[hidden] { display: none; }
+
+.selector__more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ao-spacing-4);
+  padding: 0 var(--ao-spacing-5) var(--ao-spacing-5);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-2xs);
+  color: var(--ao-text-secondary);
+}
+
+/* ── Sort ─────────────────────────────────────────────── */
+
+.selector--sort.modal { width: var(--ao-size-11); }
+
+/* Reset — tertiary with NO fill at rest (designer, 2026-09-29), so it reads as the quieter
+ * sibling of Cancel / Save order. Only the DEFAULT is overridden: hover, pressed and focus keep
+ * Button's own tertiary ladder (a plain `background: transparent` here would out-rank
+ * `.btn--tertiary:hover`, as Selector.css loads after Button.css). */
+.selector--sort [data-sort-reset]:not(:hover, :active, :focus-visible) {
+  background-color: transparent;
+}
+
+.selector__hint {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  margin: 0;
+  padding: var(--ao-spacing-3) var(--ao-spacing-5);
+  background-color: var(--ao-surface-info-soft);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-2xs);
+  color: var(--ao-text-secondary);
+}
+
+.selector__hint[hidden] { display: none; }
+
+.selector__sort-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-1);
+  margin: 0;
+  padding: var(--ao-spacing-3);
+  list-style: none;
+}
+
+/* Edit Columns' row (cc-listing__column): the insertion line is a border so dragging never
+ * shifts the list. */
+.selector__sort-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  padding: var(--ao-spacing-2) var(--ao-spacing-3);
+  border-radius: var(--ao-radius-sm);
+  border-block: 1px solid transparent;
+}
+
+.selector__sort-row:hover { background-color: var(--ao-surface-minimal); }
+
+.selector__sort-row--current,
+.selector__sort-row--current:hover { background-color: var(--ao-surface-brand-soft-extra); }
+
+/* A row that just moved, so the eye can follow it (cleared by Selector.js). */
+.selector__sort-row--moved { box-shadow: inset 2px 0 0 var(--ao-border-brand); }
+
+.selector__sort-row--dragging { opacity: 0.5; }
+.selector__sort-row--over-before { border-block-start-color: var(--ao-border-brand); }
+.selector__sort-row--over-after { border-block-end-color: var(--ao-border-brand); }
+
+.selector__grip {
+  display: flex;
+  align-items: center;
+  color: var(--ao-icon-contrast);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.selector__grip svg {
+  inline-size: var(--ao-icon-size-sm);
+  block-size: var(--ao-icon-size-sm);
+}
+
+/* Drag is paused while a search narrows the list — a drop between two rows that are not
+ * neighbours in the real order would mean nothing visible. */
+.selector--filtered .selector__grip { visibility: hidden; }
+
+/* The position is an editable number. `inline-size` (not min-inline-size) because a text
+ * input's intrinsic width is its `size` — it would otherwise set the row's floor
+ * (feedback_intrinsic_size_floor). */
+.selector__position {
+  flex: 0 0 auto;
+  inline-size: var(--ao-spacing-9);
+  block-size: var(--ao-spacing-7);
+  padding: 0 var(--ao-spacing-2);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-sm);
+  background-color: var(--ao-surface-primary);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ao-text-primary);
+  text-align: center;
+}
+
+.selector__position:focus-visible {
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: 1px;
+}
+
+.selector__sort-thumb {
+  flex: 0 0 auto;
+  inline-size: var(--ao-spacing-8);
+  block-size: var(--ao-spacing-8);
+  border-radius: var(--ao-radius-sm);
+  background-color: var(--ao-surface-secondary);
+  overflow: hidden;
+}
+
+.selector__sort-thumb img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.selector__sort-title {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-2xs);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-sm);
+  color: var(--ao-text-primary);
+}
+
+.selector__this { flex-shrink: 0; }
+
+.selector__sort-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-1);
+  flex-shrink: 0;
+}
+
+/* Move buttons — `btn btn--tertiary btn--sm` plus the subtle `--ao-border-secondary` line the
+ * listing rows' account chip and the Steps author chip carry (Case B contextual override,
+ * designer 2026-09-29): a borderless button disappears into the tinted current row and the
+ * hover tint. Restated for hover and focus because `.btn--tertiary:hover` sets the transparent
+ * hover border at (0,2,0). */
+.selector__sort-actions .btn--tertiary,
+.selector__sort-actions .btn--tertiary:hover,
+.selector__sort-actions .btn--tertiary:focus-visible {
+  border-color: var(--ao-border-secondary);
+}
+
+/* The first row cannot go up and the last cannot go down: disabled, not hidden, so the
+ * columns of buttons stay aligned. */
+.selector__sort-actions .btn:disabled { visibility: hidden; }
+
+/* Narrow: the thumbnail and the to-the-end buttons go — a typed 1 is "to the top". The
+ * modal is viewport-sized (position: fixed overlay), so @media is right here (CLAUDE.md §4a). */
+@media (max-width: 559px) {
+  .selector__sort-thumb,
+  .selector__sort-actions [data-sort-move="top"],
+  .selector__sort-actions [data-sort-move="bottom"] { display: none; }
+
+  .selector__sort-title { flex-wrap: wrap; gap: var(--ao-spacing-1); }
+
+  /* Touch has no HTML5 drag; the arrows and the position are the way to reorder there. */
+  .selector__grip { display: none; }
+}
+
+@media (hover: none) {
+  .selector__grip { display: none; }
+}

@@ -1,0 +1,618 @@
+/* FilterBar — two-row filter toolbar. Uses only --ao-* tokens.
+ *
+ * Two-row card: row1 = [saved-views | ........ Export  search  kebab],
+ *               row2 = [solid FilterItem chips ........ Add Filters].
+ * Explicit Export button, two stacked rows, and chips use the
+ * SOLID "default" FilterItem treatment (only Add Filters is dashed).
+ *
+ * JS-driven modes on the root:
+ *   .filter-bar--search    → row1 becomes back-arrow + full-width search; chips row stays
+ *   .filter-bar--new-view  → row1 views replaced by "New view" field + Create; row2 = Add Filters only
+ *
+ * Composes (link their CSS in the page): FilterItem, Dropdown, DropdownItem, Input, Button.
+ */
+
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  box-sizing: border-box;
+  /* No `overflow: hidden` here — the root's own bg + border-radius round the card,
+   * and the inter-row divider sits mid-card (clear of the corners), so nothing
+   * needs clipping. Clipping would crop the saved-views / kebab dropdown panels,
+   * which must escape the card. */
+
+  /* The bar is a container so a PICKER can size itself against the space it
+     really has (2026-09-21). The pickers already used `100cqi`, but the
+     nearest container was `cs-page` — the whole page column, which is wider
+     than the bar by its own margins and padding. At a 393px viewport that
+     made the More Filters card's 320px floor 6px wider than the 314px bar,
+     and a card that cannot fit cannot be placed: placePanel has to choose an
+     edge to satisfy and picks the left, so the excess hangs off the right.
+     Named, so the `@container cs-page` rules in this file and in
+     FilterDropdowns.css still reach past it to the page column. */
+  container: fb-bar / inline-size;
+}
+
+/* ── Rows ──────────────────────────────────────────────── */
+.filter-bar__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-5); /* 16px */
+  padding: var(--ao-spacing-4) var(--ao-spacing-5); /* 12 / 16 */
+}
+
+.filter-bar__row--top {
+  border-bottom: 1px solid var(--ao-border-secondary);
+}
+
+/* Lead area of row1 — holds the views control (or new-view / search fields). */
+.filter-bar__lead {
+  display: flex;
+  flex: 1 0 0;
+  min-width: 0;
+  align-items: center;
+  gap: var(--ao-spacing-3); /* 8px */
+}
+
+/* ── Saved-views control (Dropdown w/ field-styled trigger) ── */
+.filter-bar__views {
+  position: relative;
+  /* THE CAP LIVES HERE, not on the trigger. This element is the flex item of
+   * the row, so flex-basis resolves against the INLINE axis. The trigger is a
+   * child of .dropdown, which is `flex-direction: column` — putting
+   * `flex: 0 1 192px` there sized the trigger's BLOCK axis instead and drew a
+   * 192x192 square (measured 2026-09-17).
+   *
+   * Why a cap at all: with `flex-shrink: 0` the 192px trigger overflowed this
+   * box and painted over the Export button — trigger ran to 569px while its
+   * own box ended at 499.5 in a 562px content column. */
+  flex: 0 1 var(--ao-size-3);
+  max-inline-size: var(--ao-size-3); /* 192px */
+  min-inline-size: 0;
+}
+
+.filter-bar__views-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ao-spacing-3);
+  /* Fills the capped wrapper above. No flex shorthand here — .dropdown is a
+   * column, so a basis would size the wrong axis. The label ellipsises. */
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-height: var(--ao-spacing-8); /* 40px */
+  padding: 0 var(--ao-spacing-5); /* 0 16px */
+  margin: 0;
+  background: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xs); /* 14px */
+  font-weight: var(--ao-font-regular); /* views trigger is regular weight */
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-primary);
+  cursor: pointer;
+}
+
+.filter-bar__views-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-bar__views-chevron {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  color: var(--ao-icon-contrast);
+  flex-shrink: 0;
+  transition: transform var(--ao-transition-default);
+}
+
+.filter-bar__views.is-open .filter-bar__views-chevron {
+  transform: rotate(180deg);
+}
+
+/* On the selected row the … overlays the tick — hide the tick whenever the …
+ * is shown (row hover, its menu open, or always on touch) so they don't clash. */
+.filter-bar__views .dropdown__view:hover .dropdown-item__check,
+.filter-bar__views .dropdown__view:has(.dropdown-item__more[aria-expanded="true"]) .dropdown-item__check {
+  visibility: hidden;
+}
+
+@media (hover: none) {
+  .filter-bar__views .dropdown-item__check {
+    visibility: hidden;
+  }
+}
+
+/* Inline rename (double-click a saved-view name). */
+.filter-bar__li--renaming {
+  position: relative;
+}
+
+.filter-bar__rename {
+  position: absolute;
+  inset: var(--ao-spacing-1) var(--ao-spacing-3);
+  z-index: 1;
+  box-sizing: border-box;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-primary);
+  background: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-brand);
+  border-radius: var(--ao-radius-sm);
+  padding: 0 var(--ao-spacing-2);
+  outline: none;
+}
+
+/* ── Export: split control ─────────────────────────────
+ * The same control the Seating Planner toolbar uses (designer,
+ * 2026-09-17). The label half runs the default export; the chevron half
+ * opens the format menu.
+ *
+ * THE SPLIT ITSELF IS `.btn-group` — ButtonGroup already owned every part
+ * of it: collapsed borders (`.btn + .btn { margin-left: -1px }`), the
+ * first/last radius rounding, and the hover/focus `z-index` that stops the
+ * lifted half painting a broken outline. This pattern had been written out
+ * by hand twice — here and in SeatingPlanner.css — before anyone checked
+ * whether a component for it existed. It did.
+ *
+ * The MENU stays on `.dropdown` / `.dropdown__panel` / `.dropdown-item--xs`.
+ * ButtonGroup ships its own older `.btn-group__menu`, but the Dropdown set
+ * is the one both consumers already use and the one Figma's menu maps to,
+ * so the split takes the geometry from ButtonGroup and the menu from
+ * Dropdown rather than adopting a second menu system.
+ *
+ * Figma formalised the LOOK on 2026-09-17 as Button Type
+ * `Secondary / Action` (base 3679:17496, sm 3679:99941) — one button with a
+ * divider. Supplied as a visual reference only; the behaviour here needs
+ * two targets. Designer 2026-09-17: Figma will be updated to follow.
+ *
+ * What remains below is only what is genuinely FilterBar's. */
+
+.filter-bar__export {
+  flex-shrink: 0;
+}
+
+/* The chevron half carries an icon and no label, so it does not want the
+ * label half's inline padding. --ao-spacing-4 matches what Figma binds on
+ * Secondary / Action. */
+.filter-bar__export-more.btn {
+  padding-inline: var(--ao-spacing-4);
+}
+
+/* Panel sized as Figma's export list (160 wide, 8px padding) rather than
+ * Dropdown's 240/12 default. */
+.filter-bar__export .dropdown__panel {
+  min-width: var(--ao-size-2);
+  padding: var(--ao-spacing-3);
+}
+
+/* ── Actions (search icon + kebab) ───────────────────── */
+.filter-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+  flex-shrink: 0;
+}
+
+.filter-bar__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ao-icon-contrast);
+  cursor: pointer;
+}
+
+.filter-bar__icon-btn [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+.filter-bar__menu {
+  position: relative;
+}
+
+/* Kebab sits at the far right → right-align its panel to the trigger. */
+.filter-bar__menu .dropdown__panel {
+  left: auto;
+  right: 0;
+  /* Figma's List frame for this menu (3645:158885) binds --ao-spacing-3 (8px),
+   * where the generic .dropdown__panel uses --ao-spacing-4 (12px). Scoped
+   * rather than changed on the shared panel, which every other dropdown uses.
+   *
+   * It was load-bearing while the rows were Size=sm: a 16px leading icon plus
+   * a `data-text` reserve measured at the BOLD weight left "Generate Shipping
+   * Labels" 168px against the ~172px it needed, so it wrapped to two lines
+   * (60px row instead of 36px). The rows are Size=xs now — 13px text and a
+   * 12px icon — so it clears comfortably at either padding. Kept because 8px
+   * is what Figma draws, not because it is still holding the layout up. */
+  padding: var(--ao-spacing-3);
+}
+
+/* ── Ghost buttons inside the saved-views menu ───────────
+ * The row menu (Rename / Copy / Delete) and the "New view" footer are
+ * `btn--tertiary`, which in the CC theme is NOT a ghost button: the CC token
+ * set gives `--ao-btn-tertiary-bg` a solid #e7edf0 at REST and a *lighter*
+ * #f2f4f5 on hover, so the ladder runs backwards and every one of these
+ * rendered as a permanent grey pill (designer, 2026-09-17: "none of the
+ * buttons in the view dropdown should have a bg by default, they should only
+ * be visible on mouseover").
+ *
+ * Restored here to the behaviour the `.dropdown-item` rows in the same panel
+ * already have — transparent at rest, `--ao-surface-secondary` on hover, which
+ * is the same #e7edf0 the buttons were showing at rest. So the grey is not
+ * removed, it is moved to where it belongs.
+ *
+ * Focus-visible is aligned to hover deliberately: left alone it would inherit
+ * the lighter `--ao-btn-tertiary-bg-hover`, so a keyboard user would get a
+ * weaker highlight than a mouse user on the same control.
+ *
+ * SCOPED, and it should not have to be. The real issue is the CC values for
+ * the tertiary ladder — every `btn--tertiary` in the Control Centre has it,
+ * not just these seven.
+ *
+ * This is now the FOURTH independent workaround for the same token bug:
+ * `.cc-header .btn--tertiary` (Header.css) and two selector groups in
+ * AiAssistant.css already force transparent, and AiAssistant restores the
+ * grey on hover with `var(--ao-btn-tertiary-bg)` — the same move as here,
+ * arrived at separately. Four components patching one token is the signal
+ * that the token is wrong, not the components. Flagged for the designer:
+ * giving `--ao-btn-tertiary-bg` the transparent value in CC that it already
+ * has in the base theme, and letting hover carry the grey, makes all four
+ * blocks redundant. That is the outcome to aim for. */
+
+.filter-bar__views .btn--tertiary {
+  background-color: transparent;
+}
+
+.filter-bar__views .btn--tertiary:hover,
+.filter-bar__views .btn--tertiary:focus-visible {
+  background-color: var(--ao-surface-secondary);
+}
+
+/* ── Chip picker (the dropdown a chip opens) ────────────
+ * FilterItem owns only the chip's own visual state; its contract says
+ * outright: "Mount your own value picker on this event." The bar is that
+ * consumer, so the mounting lives here.
+ *
+ * The picker is a SIBLING of the chip inside a positioning wrapper, not a
+ * measured overlay. The chips row wraps, so a JS-positioned panel would have
+ * to be recomputed on every reflow — and the CC content column reflows with
+ * no window resize at all when the SidebarMenu docks (CLAUDE.md §4a).
+ * Anchoring in CSS costs nothing and cannot drift.
+ *
+ * `.filter-dropdowns` brings its own card chrome — background, border,
+ * radius and shadow — so this wrapper deliberately adds none. Nesting the
+ * card inside a `.dropdown__panel` would draw both.
+ *
+ * Offset and layer match `.dropdown__panel` (`--ao-spacing-3`, z-index 10)
+ * so every popover in the bar sits on one convention. */
+
+.filter-bar__chip {
+  position: relative;
+  display: inline-flex;
+  /* A chip's value can be any length a customer typed, so the wrapper has to
+     let it shrink: a flex item's default `min-width: auto` refuses to go below
+     its content, and the chip's own `max-inline-size: 100%` then resolves
+     against a box that has already grown to fit. Measured on a phone
+     (2026-09-21) a four-country chip reached 501px inside a 314px bar and ran
+     off the screen. With these two, it stops at the row and FilterItem
+     ellipsises the value. */
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.filter-bar__panel {
+  position: absolute;
+  inset-block-start: calc(100% + var(--ao-spacing-3));
+  inset-inline-start: 0;
+  z-index: 10;
+}
+
+/* Flipped when the 320px card would overrun the bar's end edge — set by
+ * FilterBar.js after the panel is shown, since only then can it be measured. */
+.filter-bar__panel--end {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+}
+
+/* ── Chips row (row2) ────────────────────────────────── */
+.filter-bar__chips {
+  display: flex;
+  flex: 1 0 0;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ao-spacing-2); /* 6px — chip gap at all screen sizes */
+}
+
+.filter-bar__add {
+  flex-shrink: 0; /* "Add Filters" is the last chip in the flow (after the filter list) */
+}
+
+/* ── Search mode (row1 → back + full-width search; chips row stays) ── */
+.filter-bar__back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ao-icon-contrast);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.filter-bar__back [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+.filter-bar__search {
+  display: none;
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.filter-bar--search .filter-bar__back {
+  display: inline-flex;
+}
+
+.filter-bar--search .filter-bar__search {
+  display: block;
+}
+
+.filter-bar--search .filter-bar__views,
+.filter-bar--search .filter-bar__export,
+.filter-bar--search .filter-bar__actions {
+  display: none;
+}
+
+/* ── Persistent search field (desktop) ───────────────────
+ * Figma 2977:3803 desktop shows a 192px search Input always present in the
+ * actions cluster. Figma orders it Export | Search | kebab; the listing screens
+ * order it SEARCH | Export | kebab (designer, 2026-09-21) — searching is the
+ * frequent act and exporting the occasional one, so the field sits nearer the
+ * filters it works with. A markup change only: this row is a plain flex with a
+ * gap and no positional selectors, so nothing here had to move.
+ * An instruction that overrides the frame, not a reading of it.
+ * On mobile (Figma 2977:3804) it
+ * collapses to the search icon + full-width takeover (the --search mode above).
+ * Mobile-first: hidden by default; the search icon shows. ≥768px: field shows,
+ * icon hides. */
+.filter-bar__search-bar {
+  display: none;
+}
+
+@container cs-page (min-width: 768px) {
+  .filter-bar__search-bar {
+    display: block;
+    flex: 0 1 var(--ao-size-3);
+    inline-size: var(--ao-size-3); /* 192px */
+    max-inline-size: var(--ao-size-3);
+    min-inline-size: 0;
+  }
+
+  /* The search icon is mobile-only — the persistent field replaces it on desktop. */
+  .filter-bar__icon-btn[aria-label="Search"] {
+    display: none;
+  }
+}
+
+/* ── New View mode ───────────────────────────────────── */
+.filter-bar__new-view {
+  display: none;
+  flex: 0 1 var(--ao-size-3);
+  inline-size: var(--ao-size-3); /* 192px */
+  max-inline-size: var(--ao-size-3);
+  min-inline-size: 0;
+}
+
+.filter-bar__create {
+  display: none;
+  flex-shrink: 0;
+}
+
+/* The new-view field's × is a cancel control, not a text-clear — keep it visible
+ * even when the field is empty (Input's default hides it until text is typed). */
+.filter-bar__new-view .input__clear {
+  visibility: visible;
+}
+
+/* Naming a view to SAVE borrows New View's field + Create — the only naming UI
+ * Figma defines — but not its collapsed chip row: a view is being saved
+ * BECAUSE of the chips on the bar. Hence the second class rather than reusing
+ * `--new-view` for both. */
+.filter-bar--new-view .filter-bar__views,
+.filter-bar--saving-view .filter-bar__views {
+  display: none;
+}
+
+.filter-bar--new-view .filter-bar__new-view,
+.filter-bar--saving-view .filter-bar__new-view {
+  display: block;
+}
+
+.filter-bar--new-view .filter-bar__create,
+.filter-bar--saving-view .filter-bar__create {
+  display: inline-flex;
+}
+
+
+/* New-view mode — and a freshly created (empty) view — collapse row 2 to just the
+ * "Add Filters" chip. Add Filters now lives inside __chips (last in the flow), so
+ * hide only the OTHER chips. Existing views keep their full chip set. */
+.filter-bar--new-view .filter-bar__chips > .filter-item:not(.filter-bar__add),
+.filter-bar--view-empty .filter-bar__chips > .filter-item:not(.filter-bar__add),
+/* A chip with a picker is WRAPPED (`.filter-bar__chip` holds chip + panel), so
+   the bare-chip selectors above never reach it and the listing's chips stayed
+   visible in an empty view. */
+.filter-bar--new-view .filter-bar__chips > .filter-bar__chip:not(.filter-bar__chip--add):not(.filter-bar__chip--shown),
+.filter-bar--view-empty .filter-bar__chips > .filter-bar__chip:not(.filter-bar__chip--add):not(.filter-bar__chip--shown) {
+  display: none;
+}
+
+/* The screen's own (base) filters are listed in Add Filters as well, but only
+ * New View and an empty view need them there — everywhere else their chips are
+ * already on the bar. Picking one marks its chip `--shown`, above. */
+.filter-bar:not(.filter-bar--view-empty):not(.filter-bar--new-view) .filter-bar__facet--base {
+  display: none;
+}
+
+/* ── Save View (Type=Save View) — a primary "Save view" CTA shown once a filter is
+ * added/amended. It's the last child INSIDE __chips (a Button, primary sm). On desktop
+ * `margin-left:auto` pins it to the right edge of the chip row; on mobile that margin
+ * is dropped (see media query) so it flows right after "Add Filters" in the wrapping
+ * chips. Hidden until the bar enters the save-view state. */
+.filter-bar__save {
+  display: none;
+  flex-shrink: 0;
+}
+
+.filter-bar--save-view .filter-bar__save {
+  display: inline-flex;
+  margin-left: auto; /* desktop: pin to the right edge of the chip row */
+}
+
+/* While the name is being typed, the CTA that opened the field would offer the
+ * same action twice. Placed AFTER the rule above deliberately: both selectors
+ * are one class + one class, so the cascade is decided by order — written
+ * earlier, this lost and the CTA stayed on screen beside the field. */
+.filter-bar--saving-view .filter-bar__save {
+  display: none;
+}
+
+/* The CTA is a group: Discard changes, then a Save split. MOCK for review
+ * (2026-10-12) — Figma Type=Save View (2989:6121 / 2989:6242) defines the single button
+ * only. Built from existing parts and no new values: the split is ButtonGroup
+ * --brand (primary halves + its own divider), the menu is Dropdown, the gap is
+ * the bar's own --ao-spacing-3. */
+.filter-bar__save {
+  align-items: center;
+  gap: var(--ao-spacing-3);
+}
+
+/* Right-aligned to the chevron, sized like the Export list. */
+.filter-bar__save-split .dropdown__panel {
+  left: auto;
+  right: 0;
+  min-width: var(--ao-size-2);
+  padding: var(--ao-spacing-3);
+}
+
+/* "Save as new view" is wider than the 160 list, and wrapped under its icon. */
+.filter-bar__save-split .dropdown-item {
+  white-space: nowrap;
+}
+
+/* A shipped view cannot be overwritten, so there is no split: Save view
+ * names a new one. The label half then stands alone and takes the full radius. */
+.filter-bar:not(.filter-bar--view-saved) .filter-bar__save-more {
+  display: none;
+}
+
+.filter-bar:not(.filter-bar--view-saved) .filter-bar__save-main {
+  border-radius: var(--ao-radius-md);
+}
+
+/* The label says which save it is: "Save" updates the view you are in, "Save
+ * view" names a new one. Both are in the markup and CSS picks one, because the
+ * Listing re-renders this control and would reset text set from JS. */
+.filter-bar--view-saved .filter-bar__save-label--new,
+.filter-bar:not(.filter-bar--view-saved) .filter-bar__save-label--update {
+  display: none;
+}
+
+/* ── Focus (a11y) ────────────────────────────────────── */
+.filter-bar__views-trigger:focus-visible,
+.filter-bar__icon-btn:focus-visible,
+.filter-bar__back:focus-visible {
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: 2px;
+  border-radius: var(--ao-radius-sm);
+}
+
+/* ── Mobile (Device=Mobile): Export collapses out of the bar (per Figma) ── */
+@container cs-page (max-width: 767px) {
+  .filter-bar__export {
+    display: none;
+  }
+
+  /* Even padding on both rows at mobile. Figma's mobile frames say
+     --ao-spacing-4 (12px); the designer took it to --ao-spacing-3 (8px) on
+     2026-09-21 after seeing it on a phone, where the chips are the content and
+     the frame around them was taking room they needed. An instruction that
+     overrides the frames, not a reading of them — so Figma wants updating
+     rather than this line being "corrected" back to 12. */
+  .filter-bar__row {
+    padding: var(--ao-spacing-3);
+  }
+
+  /* New View mode: let the field flex (basis 0, then grow) so it shrinks to make
+   * room for Create instead of pushing it off the line. Create keeps its width. */
+  .filter-bar--new-view .filter-bar__new-view {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  /* The "Create" CTA uses the small button at mobile (Figma mobile New View
+   * variant 2977:3806 — button/sm). Mirrors .btn--sm (radius unchanged = md). */
+  .filter-bar__create {
+    padding: 0 var(--ao-spacing-4);
+    min-height: var(--ao-spacing-7);
+    font-size: var(--ao-font-fluid-xxs);
+  }
+
+  /* Save View: on mobile the CTA sits after "Add Filters" in the wrapping chip flow
+   * (Figma mobile 2989:6242) — drop the desktop auto-margin that pins it right. */
+  .filter-bar--save-view .filter-bar__save {
+    margin-left: 0;
+  }
+
+  /* Alt Search (Type=Alt Search, Device=Mobile — Figma 2999:4699): instead of the
+   * search icon + full-width takeover, the search is a persistent field that fills
+   * row 1 between the views dropdown and the kebab. Per Figma the views control hugs
+   * its content (~136px, not the 192px field) and all three gaps are 8px. */
+  .filter-bar--alt-search .filter-bar__row--top {
+    gap: var(--ao-spacing-5); /* 16px between the views control and the search field */
+  }
+
+  .filter-bar--alt-search .filter-bar__lead {
+    flex: 0 1 auto; /* views at content width, not filling */
+  }
+
+  .filter-bar--alt-search .filter-bar__views-trigger {
+    width: auto; /* hug "All Orders ▾" instead of the fixed 192px field */
+    padding: 0; /* borderless, paddingless plain control (Figma alt-search) */
+    border: 0;
+    background: transparent;
+    /* keep min-height for vertical alignment with the 40px search field */
+  }
+
+  .filter-bar--alt-search .filter-bar__actions {
+    flex: 1 0 0; /* the actions cluster fills, so the search field can grow */
+    min-width: 0;
+  }
+
+  .filter-bar--alt-search .filter-bar__search-bar {
+    display: block;
+    flex: 1 0 0;
+    width: auto;
+    min-width: 0;
+  }
+
+  .filter-bar--alt-search .filter-bar__icon-btn[aria-label="Search"] {
+    display: none; /* no icon — the persistent field replaces it */
+  }
+}

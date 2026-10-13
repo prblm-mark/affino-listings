@@ -1,0 +1,1442 @@
+/* Datatables component
+ * Figma node: 2562:8289 — Tier=Component
+ * Variants: Type (Pagination | Search) × Device (Desktop | Mobile)
+ *           × Overflow Content (Scroll | Trigger)
+ *
+ * Composes the production Table component (`.table` + `.table-wrap`)
+ * and adds toolbar / pagination footer / sortable headers / kebab-row-
+ * expand chrome around it. Mobile is responsive via @container (the
+ * .datatables is a container-type: inline-size context) — below 768px
+ * container width the chrome padding compacts to spacing-3. The Trigger
+ * overflow pattern (kebab to reveal hidden columns) is markup-driven and
+ * works at any viewport.
+ *
+ * Token namespace (added 2026-05-07): chrome uses the new
+ * `--ao-datatable-*` tokens (table-bg / table-header-bg /
+ * table-subheader-bg / table-footer-bg / table-expanded-bg /
+ * table-border) sourced from the Figma `components/global/datatable`
+ * subtree. Table cells inside Datatables are scoped via
+ * `.datatables .table` so the namespaced tokens apply without forcing
+ * the standalone Table component to use them.
+ */
+
+/* ── Outer container ─────────────────────────────────── */
+/* Uses the same chrome as .table-wrap (white bg, border, radius,
+ * overflow clip) but takes the additional toolbar + footer children.
+ * The inner <table> uses .table from the Table component. */
+
+.datatables {
+  background-color: var(--ao-datatable-table-bg);
+  border: 1px solid var(--ao-datatable-table-border);
+  border-radius: var(--ao-radius-md);
+  /* `clip`, not `hidden` (2026-09-23). Both clip the children to the rounded
+   * corners, but `hidden` also makes this box a scroll container, and a
+   * `position: sticky` descendant then sticks to IT — which never scrolls — so
+   * ListingScreen's selection bar could not pin under the CC header. `clip`
+   * paints the same and creates no scroll container. `hidden` stays first as
+   * the fallback for browsers without `clip`, where the bar simply does not
+   * stick. */
+  overflow: hidden;
+  overflow: clip;
+  container-type: inline-size;
+}
+
+/* Table chrome overrides when Table is composed inside Datatables.
+ * Table itself uses generic semantic tokens; here we scope it to the
+ * datatable namespace so the column-header bg and cell borders match
+ * the new Figma tokens (subheader-bg = white, border = #e2e2e3). */
+
+.datatables .table thead th {
+  background-color: var(--ao-datatable-table-subheader-bg);
+  border-bottom-color: var(--ao-datatable-table-border);
+}
+
+.datatables .table tbody td {
+  border-bottom-color: var(--ao-datatable-table-border);
+}
+
+/* Trigger variant: when the last <tr> is a paired (hidden) detail row,
+ * the visible .datatables__row above it would otherwise leave a border
+ * that doubles against the footer's top border. Strip it. */
+
+.datatables__row:has(+ .datatables__row-detail:last-child) > td {
+  border-bottom: 0;
+}
+
+/* Inner wrap that holds ONLY the <table>. Scroll lives here, not on
+ * the outer .datatables — so the toolbar above and pagination footer
+ * below stay fixed while the table content scrolls horizontally. */
+
+.datatables__body {
+  overflow-x: auto;
+}
+
+/* When the user wraps with .datatables--mobile-scroll we constrain to
+ * phone-frame width. Inner __body still handles the scroll.
+ * Mobile-Trigger does NOT use this — it shows fewer columns inside
+ * the same narrow frame and uses kebab expand instead of scroll. */
+
+.datatables--mobile-scroll {
+  max-width: 24rem;
+}
+
+.datatables--mobile-scroll .datatables__body .table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.datatables--mobile-scroll .datatables__body .table thead th,
+.datatables--mobile-scroll .datatables__body .table tbody td {
+  white-space: nowrap;
+}
+
+/* ── Toolbar (top of container) ──────────────────────── */
+
+.datatables__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ao-spacing-4);
+  padding: var(--ao-spacing-4) var(--ao-spacing-5);
+  background-color: var(--ao-datatable-table-header-bg);
+  border-bottom: 1px solid var(--ao-datatable-table-border);
+}
+
+.datatables__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-regular);
+  color: var(--ao-text-contrast);
+  white-space: nowrap;
+}
+
+.datatables__meta strong {
+  font-weight: var(--ao-font-bold);
+}
+
+.datatables__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+}
+
+/* ── Page-size select (button styled as small select) ──
+ * Used on the Pagination type's toolbar. Native <select> does not
+ * render its value cleanly in Figma capture, so this is a button
+ * trigger. Real selection behaviour is left to the consumer. */
+
+.datatables__select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  height: var(--ao-spacing-8);
+  padding: 0 var(--ao-spacing-3);
+  background-color: var(--ao-datatable-table-bg);
+  border: 1px solid var(--ao-datatable-table-border);
+  border-radius: var(--ao-radius-md);
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-medium);
+  color: var(--ao-text-primary);
+  cursor: pointer;
+  transition: border-color var(--ao-transition-default);
+}
+
+.datatables__select:hover {
+  border-color: var(--ao-border-contrast);
+}
+
+.datatables__select [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  color: var(--ao-icon-contrast);
+}
+
+/* ── Search field (Search type, slots into toolbar) ── */
+
+.datatables__search {
+  flex: 1;
+  max-width: 18rem;
+  align-items: flex-end;
+}
+
+.datatables__search .input__wrap {
+  min-height: var(--ao-spacing-8);
+}
+
+/* ── Sortable column header ──────────────────────────── */
+/* Slots inside <th> in place of the bare text. Inherits the th's
+ * uppercase / weight / colour. */
+
+.datatables__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.datatables__sort [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  color: var(--ao-icon-contrast);
+}
+
+/* ── Pagination footer ───────────────────────────────── */
+
+.datatables__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ao-spacing-3);
+  padding: var(--ao-spacing-3) var(--ao-spacing-5);
+  background-color: var(--ao-datatable-table-footer-bg);
+  border-top: 1px solid var(--ao-datatable-table-border);
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-contrast);
+}
+
+.datatables__footer strong {
+  font-weight: var(--ao-font-bold);
+}
+
+.datatables__pagination {
+  display: inline-flex;
+  align-items: stretch;
+  background-color: var(--ao-datatable-table-bg);
+  border: 1px solid var(--ao-datatable-table-border);
+  border-radius: var(--ao-radius-md);
+  overflow: hidden;
+}
+
+.datatables__page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--ao-spacing-8);
+  height: var(--ao-spacing-8);
+  padding: 0 var(--ao-spacing-3);
+  background: transparent;
+  border: 0;
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-primary);
+  cursor: pointer;
+  transition: background-color var(--ao-transition-default);
+}
+
+.datatables__page-btn:hover {
+  background-color: var(--ao-datatable-table-footer-bg);
+}
+
+/* Separators sit between the GROUP's children — the arrows, the number set
+ * and the position readout — rather than between buttons, because one of the
+ * last two is always hidden and `+` still counts a `display: none` sibling.
+ * Keyed to the buttons alone, the Next arrow lost its divider whenever the
+ * hidden member happened to sit in front of it. */
+.datatables__pagination > * + * {
+  border-left: 1px solid var(--ao-datatable-table-border);
+}
+
+/* …and between the numbers inside their own wrapper. */
+.datatables__page-numbers {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.datatables__page-numbers .datatables__page-btn + .datatables__page-btn {
+  border-left: 1px solid var(--ao-datatable-table-border);
+}
+
+/* "Page 3 of 7" — what the numbers become when there is no room for them.
+ * Hidden until a container query asks for it. */
+.datatables__page-position {
+  display: none;
+  align-items: center;
+  padding: 0 var(--ao-spacing-4);
+  font-family: var(--ao-font-body);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-primary);
+  white-space: nowrap;
+}
+
+.datatables__page-btn--active {
+  background-color: var(--ao-datatable-table-border);
+  color: var(--ao-text-primary);
+  font-weight: var(--ao-font-bold);
+}
+
+.datatables__page-btn--active:hover {
+  background-color: var(--ao-datatable-table-border);
+}
+
+.datatables__page-btn [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+/* ── Kebab-row-expand pattern (Overflow Content=Trigger) ──
+ * Pure CSS via :has(:checked). Each row pair is:
+ *   <tr class="datatables__row">         visible (Product + Price + kebab)
+ *   <tr class="datatables__row-detail">  hidden by default; revealed when
+ *                                        prev row's kebab is :checked.
+ * The kebab is a <label> wrapping a hidden checkbox + dots icon. */
+
+.datatables__kebab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ao-spacing-7);
+  height: var(--ao-spacing-7);
+  border: 1px solid transparent;
+  border-radius: var(--ao-radius-md);
+  cursor: pointer;
+  color: var(--ao-icon-contrast);
+  transition: background-color var(--ao-transition-default),
+              border-color var(--ao-transition-default),
+              color var(--ao-transition-default);
+}
+
+/* Hover draws the SAME line the table draws between its rows —
+ * `1px solid var(--ao-border-secondary)`, the row border (designer,
+ * 2026-09-18). The border is reserved as transparent at rest rather than
+ * added on hover: with `box-sizing: border-box` the box stays 32px either way,
+ * so the icon does not shift by a pixel as the pointer crosses it. */
+.datatables__kebab:hover {
+  background-color: var(--ao-datatable-table-expanded-bg);
+  border-color: var(--ao-border-secondary);
+  color: var(--ao-text-primary);
+}
+
+.datatables__kebab__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.datatables__kebab [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+.datatables__kebab-cell {
+  width: var(--ao-spacing-7);
+  text-align: right;
+}
+
+/* Kebab column hugs its right-aligned dots icon — no left padding. Specificity
+   raised above the base `.table` cell padding (and the mobile compaction). */
+.datatables .table thead th.datatables__kebab-cell,
+.datatables .table tbody td.datatables__kebab-cell {
+  padding-left: 0;
+}
+
+.datatables__row-detail {
+  display: none;
+}
+
+/* Out of the way for the measuring pass — see measureColumns. A detail row is
+ * one cell spanning every column, so while it is open it would otherwise hand
+ * its own width demand to all of them. */
+.datatables__row-detail--measuring {
+  display: none;
+}
+
+.datatables__row:has(.datatables__kebab__input:checked) + .datatables__row-detail {
+  display: table-row;
+}
+
+.datatables__row:has(.datatables__kebab__input:checked) {
+  background-color: var(--ao-datatable-table-expanded-bg);
+}
+
+.datatables__row-detail__cell {
+  padding: 0;
+  background-color: var(--ao-datatable-table-expanded-bg);
+  border-bottom: 1px solid var(--ao-datatable-table-border);
+}
+
+.datatables__detail-list {
+  margin: 0;
+  padding: var(--ao-spacing-3) var(--ao-spacing-5);
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--ao-spacing-5);
+  row-gap: var(--ao-spacing-2);
+  font-size: var(--ao-font-fixed-xs);
+}
+
+/* One dt/dd pair, as a single thing to show or hide. `display: contents`
+ * keeps both halves in the list's own grid — a wrapper that laid out would
+ * break the two-column alignment the list is for. `[hidden]` in base.css
+ * carries `!important`, so hiding still wins over this.
+ *
+ * Orders overrides this below: with 15+ pairs the pair itself becomes the
+ * grid item so the panel can flow into columns. */
+.datatables__detail-item {
+  display: contents;
+}
+
+/* Nothing is missing from the row, so say so rather than opening an empty
+ * panel. It spans both grid columns. */
+.datatables__detail-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--ao-text-contrast);
+}
+
+.datatables__detail-list dt {
+  font-size: var(--ao-font-fixed-xxs);
+  font-weight: var(--ao-font-semibold);
+  color: var(--ao-text-contrast);
+  text-transform: uppercase;
+  letter-spacing: var(--ao-tracking-7);
+  align-self: center;
+}
+
+.datatables__detail-list dd {
+  margin: 0;
+  color: var(--ao-text-primary);
+}
+
+/* ── Mobile responsive (≤767px container width) ─────────
+ * Container-query based — the table compacts whenever its own width
+ * drops below 768px, not just when the viewport does. */
+
+@container (max-width: 767px) {
+  /* Trim toolbar gap and stack action labels behind icons */
+  .datatables__toolbar {
+    gap: var(--ao-spacing-2);
+  }
+
+  /* Compact padding below 768px container width: every element that uses
+   * spacing-5 / spacing-4 padding at desktop drops to a uniform
+   * spacing-3 (8px) on both axes. Covers the toolbar, footer, detail list,
+   * and the header/body cells (Table cell rules scoped to .datatables so
+   * the base Table component elsewhere is unaffected). */
+  .datatables__toolbar,
+  .datatables__footer,
+  .datatables__detail-list,
+  .datatables .table thead th,
+  .datatables .table tbody td {
+    padding: var(--ao-spacing-3) var(--ao-spacing-3);
+  }
+
+  /* Tight column: drops right padding so the column collapses toward its
+   * content, handing the freed width to its neighbour. Used on the Login
+   * column of the Whos Online · Trigger variant. Specificity is raised
+   * above the compaction rule's `.datatables .table tbody td`. */
+  .datatables .table thead th.datatables__col--tight,
+  .datatables .table tbody td.datatables__col--tight {
+    padding-right: 0;
+  }
+
+  /* Toolbar search fills the available space below 768px. At desktop the search uses
+   * `align-items: flex-end` (content-width, right-aligned); stretching it here lets it
+   * shrink and grow with a narrow toolbar instead.
+   *
+   * A companion `.input__wrap { max-width: none }` used to sit here, lifting the 192px
+   * cap Input's --sm size carried. That cap was removed from Input on 2026-08-25, so the
+   * override is gone as redundant. */
+  .datatables__search {
+    align-items: stretch;
+  }
+}
+
+/* ── Body cell content patterns (used by Whos Online variants) ──
+ * The Whos Online Type composes Avatar + Portraits in the USER cell,
+ * a tertiary Button in the ACCOUNT cell, and a Lucide fingerprint
+ * icon in the TOUCH cell. Classes live on the cell content, not the
+ * <td>, so consumers can opt into them per cell. */
+
+.datatables__user-cell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ao-spacing-3);
+}
+
+.datatables__user-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-0);
+  min-width: 0;
+}
+
+.datatables__user-name,
+.datatables__user-role {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.datatables__user-name {
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-bold);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-primary);
+  line-height: var(--ao-leading-sm);
+}
+
+.datatables__user-role {
+  font-family: var(--ao-font-body);
+  font-weight: var(--ao-font-medium);
+  font-size: var(--ao-font-fixed-xs);
+  color: var(--ao-text-contrast);
+  line-height: var(--ao-leading-sm);
+}
+
+/* Cell that centres a Lucide icon (e.g. fingerprint TOUCH column). */
+
+.datatables__icon-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ao-icon-secondary);
+}
+
+.datatables__icon-cell [data-lucide] {
+  width: var(--ao-icon-size-md);
+  height: var(--ao-icon-size-md);
+}
+
+/* ── Type=Orders ─────────────────────────────────────────
+ * Figma: 3648:164786 (Device=Desktop, Overflow Content=Scroll)
+ *        3648:164467 (Device=Mobile,  Overflow Content=Trigger)
+ *
+ * Added 2026-09-17 for the Listing Screen template. Orders is the
+ * fourth Type on this component set (after Pagination / Search /
+ * Whos Online) and the first one driven by a data renderer rather
+ * than hand-authored rows — see src/cc/templates/ListingScreen/.
+ *
+ * WHY EVERYTHING HERE IS SCOPED TO `--orders`
+ * The Orders variant disagrees with the values the earlier three
+ * Types were built from (toolbar/footer paint, user-name weight,
+ * user-role family+colour, user-cell gap, active-page paint, the
+ * rows-per-page control height). Designer's call 2026-09-17 was to
+ * scope rather than migrate, so Pagination / Search / Whos Online
+ * keep exactly the rendering they were signed off with.
+ *
+ * COLUMN WIDTHS ARE INTRINSIC, NOT THE FIGMA PIXELS
+ * Figma fixes ORDER NO 114, QTY 100, kebab 48, checkbox 32 and sets
+ * min-widths of 250 (CUSTOMER) / 170 (ACCOUNT). None of those map to
+ * an --ao-* token, so writing them would breach the hardcoded-
+ * dimension rule. `.datatables__col--hug` shrink-wraps the narrow
+ * columns instead and the wide ones take the remainder, which
+ * reproduces the design AND holds at any column width — the point of
+ * CLAUDE.md §4a, and it matters here because ~400 screens share this
+ * template inside a shell whose content column resizes with no
+ * window resize at all.
+ */
+
+/* Toolbar paints white rather than the shared header-bg. Identical in
+ * CC light (both #ffffff); they diverge in CC dark (#1e293b vs
+ * #293548), which is the only reason this override exists. */
+.datatables--orders .datatables__toolbar {
+  background-color: var(--ao-surface-primary);
+}
+
+/* "of 296" — Figma colours the bold count a step darker than the
+ * label it sits in. Figma cannot bind a variable to a text RANGE, so
+ * the design context reports it as a raw hex; it resolves to
+ * --ao-text-secondary in every mode. */
+.datatables--orders .datatables__meta strong {
+  color: var(--ao-text-secondary);
+}
+
+/* Rows-per-page control: the base 40px (`--ao-spacing-8`, the base button
+ * height). Orders used to take it down to 32px from the Orders frame
+ * (3648:164786); the designer put it back to base height on both listing
+ * templates, 2026-09-23 — and the full-width Listings frame 3788:16762 draws
+ * it at 40. So there is no Orders override any more. */
+
+/* Column headers: bold on contrast text (designer, 2026-09-23) — was medium
+ * on primary, from the Orders frame; the base Table component uses semibold
+ * on secondary. */
+.datatables--orders .table thead th {
+  font-weight: var(--ao-font-bold);
+  color: var(--ao-text-contrast);
+}
+
+/* …and the ACTIVE sort column's label stays that colour too (designer,
+ * 2026-09-23). The base `.datatables__sort--active` darkens it to
+ * `--ao-text-primary`; on Orders every header label reads alike, and so does
+ * every chevron — the active one keeps the rest's `--ao-icon-contrast`
+ * rather than darkening to primary. The state is carried by SHAPE alone: a
+ * single direction chevron on the active column, the pair on the rest. */
+.datatables--orders .datatables__sort--active {
+  color: inherit;
+}
+
+.datatables--orders .datatables__sort--active [data-lucide] {
+  color: var(--ao-icon-contrast);
+}
+
+/* 64px minimum row. `height` on a table cell behaves as a minimum, so
+ * this grows with content instead of clipping it. */
+.datatables--orders .table tbody td {
+  height: var(--ao-spacing-11);
+}
+
+/* Shrink-to-fit column (ORDER NO, QTY, checkbox, kebab). `width: 1%`
+ * is the table-layout idiom for "take only what the content needs";
+ * the remaining columns absorb the slack. */
+/* ── Fixed layout, from 2026-09-21 ───────────────────────
+ * The listing table's widths come from ListingScreen.js (`sizeColumns`), not
+ * from its content. Under auto layout a cell could always widen its own
+ * column, and three bugs came out of that single fact: an 84-character
+ * article title demanded 436px and left two columns on a 1400px screen; the
+ * cap that stopped it then left a band of empty space beside every title,
+ * because the column took the slack and the capped text could not use it; and
+ * because the cap was itself container-dependent, the fit and the cap chased
+ * each other across a resize and a column flickered.
+ *
+ * Fixed layout removes the cause rather than each symptom: content cannot
+ * affect a column, so the text simply ellipsises at whatever width the fit
+ * gave it. The measuring pass still runs at `max-content` — that is where the
+ * fit learns what each column WANTS — and only the render is fixed.
+ *
+ * Scoped to `--orders` so the Multi Select Table pickers keep auto layout;
+ * their widths are content-driven by design. */
+.datatables--orders .table {
+  table-layout: fixed;
+}
+
+/* …except while measuring, which is the one pass that has to ask the content
+   what it wants. */
+.datatables--orders .datatables__table--measuring {
+  table-layout: auto;
+}
+
+/* The three column roles are now WIDTHS, written by sizeColumns. What remains
+ * here is the wrapping behaviour each one implies. */
+.datatables--orders .datatables__col--hug {
+  white-space: nowrap;
+}
+
+/* Shrink-wrap WITHOUT nowrap, for the enumerated columns.
+ *
+ * `--hug`'s nowrap is right for a code or a money value, which have no
+ * wrap point worth taking. It is wrong for "Awaiting Payment Confirmation":
+ * that one value forced the table wider than its container, so the table
+ * overflowed to the right AND every fluid column collapsed to min-content —
+ * the Customer column truncating to "Mari…" was this, not a share-of-slack
+ * problem. Wrapping keeps the whole value readable and hands the slack back
+ * to Customer. */
+/* Snug columns take a SHARE of the table rather than shrink-wrapping.
+ *
+ * `width: 1%` made every one of them hug its content, which meant any width
+ * the fit did not use had to pool somewhere — in Customer, which ballooned, or
+ * in a spacer, which read as a gap. Letting them be auto spreads the leftover
+ * across the text columns instead, so there is never a visible gap and the
+ * columns simply breathe. Their content is capped by `__truncate`, so a long
+ * value still cannot dictate the width. */
+.datatables--orders .datatables__col--snug {
+  width: auto;
+}
+
+/* ORDER NO is the row's identifier — semibold, unlike the other
+ * plain-text cells which stay regular. */
+.datatables--orders .datatables__order-no {
+  font-weight: var(--ao-font-semibold);
+}
+
+/* ── Clickable rows ──────────────────────────────────────
+ * Scoped to `--rows-clickable`, NOT to a Type: a row is a target because
+ * something wired it up, not because the table holds orders. The class is
+ * added by the code that binds the row click (ListingScreen.js), so the
+ * affordance and the thing it advertises cannot drift apart — a datatable
+ * whose rows do nothing never gets the pointer.
+ *
+ * A whole row opens the record, so it has to say so — a pointer and a hover
+ * tint, the same tint an expanded row and the kebab already use, so the table
+ * gains a state rather than a new colour. The DETAIL row is excluded: it is
+ * the expansion of the row above, not a target of its own. */
+.datatables--rows-clickable .datatables__row {
+  cursor: pointer;
+}
+
+.datatables--rows-clickable .datatables__row:hover {
+  background-color: var(--ao-datatable-table-expanded-bg);
+}
+
+/* The account chip vanished on a hovered row.
+ *
+ * `.btn--tertiary:hover` (0,2,0) out-specifies the chip's contextual border
+ * (0,1,0) and sets `--ao-btn-tertiary-border-hover`, which is transparent in
+ * every mode — so hovering the chip removed the only edge it had. Measured in
+ * Light and CC, the fill it falls back to is `rgb(242,244,245)` against a row
+ * tint of `rgb(243,246,247)`: a difference of one to two per channel. No
+ * border and no fill contrast left the chip unreadable, which is only visible
+ * now that the row paints on hover.
+ *
+ * Holding the border through hover and focus fixes it, in the same colour the
+ * edit icon and the kebab use — one line for all three row controls
+ * (designer, 2026-09-21). */
+.datatables--rows-clickable .datatables__account-chip:hover,
+.datatables--rows-clickable .datatables__account-chip:focus-visible {
+  border-color: var(--ao-border-secondary);
+}
+
+/* The order number is the row's real link — the keyboard path to the same
+ * place the row click goes. It keeps the cell's own colour, and NO underline,
+ * not even on hover (designer, 2026-09-23): the whole row is the click target
+ * and already says so with its pointer and hover tint, so a second cue on the
+ * text was redundant. Keyboard focus still gets the global `:focus-visible`
+ * outline from base.css, so the link stays findable without a mouse.
+ *
+ * `__record-link` is the same link on any other screen — a column declared
+ * `link: true` (ListingScreen.js), e.g. Title on Articles, Article Archive and
+ * Media Items. Same treatment, so every listing's record link reads alike. */
+.datatables--orders .datatables__order,
+.datatables--orders .datatables__record-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The record link is the row's identifier, like ORDER NO — so it takes the
+ * same semibold (designer, 2026-09-23), where the cell around it is regular. */
+.datatables--orders .datatables__record-link {
+  font-weight: var(--ao-font-semibold);
+}
+
+/* Customer cell deltas vs the Whos Online rendering. */
+.datatables--orders .datatables__user-cell {
+  gap: var(--ao-spacing-4);
+}
+
+.datatables--orders .datatables__user-name {
+  font-weight: var(--ao-font-semibold);
+}
+
+.datatables--orders .datatables__user-role {
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-regular);
+  color: var(--ao-text-secondary);
+}
+
+/* Initials avatar uses the BRAND soft palette here; the Avatar
+ * component's own --initials variant is the info palette. Contextual
+ * override (Case B) applied by analogy with the account chip below —
+ * flagged for the designer to formalise as an Avatar variant if it
+ * turns out to be the house style rather than a one-off. */
+.datatables--orders .avatar--initials {
+  background-color: var(--ao-surface-brand-soft-extra);
+  color: var(--ao-text-brand);
+}
+
+/* Account chip — `btn btn--tertiary btn--sm` plus a visible border.
+ * Tertiary's own border token is transparent in every mode, so the
+ * border is a contextual override (Case B, designer's call
+ * 2026-09-17) rather than a new Button variant. */
+.datatables__account-chip {
+  border-color: var(--ao-border-secondary);
+}
+
+/* Footer matches the toolbar: white, not the shared footer-bg. */
+.datatables--orders .datatables__footer {
+  background-color: var(--ao-surface-primary);
+}
+
+/* Current page is painted footer-bg rather than the border grey the
+ * other Types use. NOTE: in CC LIGHT that resolves to the same white
+ * as the pagination container, so weight alone carries the state —
+ * which is why the markup also sets aria-current="page". Flagged to
+ * the designer; do not "fix" it here without a Figma change. */
+.datatables--orders .datatables__page-btn--active {
+  background-color: var(--ao-datatable-table-footer-bg);
+}
+
+.datatables--orders .datatables__page-btn--active:hover {
+  background-color: var(--ao-datatable-table-footer-bg);
+}
+
+/* Per-row edit affordance — BORDERLESS, and on every row at every width
+ * (designer, 2026-09-18). It was a Secondary icon button, and mobile-only.
+ *
+ * It takes the KEBAB's treatment, deliberately: the two sit side by side at
+ * the end of the row, and a bordered control next to a bare one reads as two
+ * different kinds of thing. Same box, same radius, same hover — so the pair
+ * reads as one set of row controls. Any change to one belongs on both.
+ *
+ * An anchor rather than a button, so `display` has to be set here; a button
+ * brought its own. */
+.datatables__row-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--ao-spacing-7);
+  height: var(--ao-spacing-7);
+  border: 1px solid transparent;
+  border-radius: var(--ao-radius-md);
+  cursor: pointer;
+  color: var(--ao-icon-contrast);
+  transition: background-color var(--ao-transition-default),
+              border-color var(--ao-transition-default),
+              color var(--ao-transition-default);
+}
+
+/* Same hover as the kebab, including the row-border line — see the note there. */
+.datatables__row-edit:hover {
+  background-color: var(--ao-datatable-table-expanded-bg);
+  border-color: var(--ao-border-secondary);
+  color: var(--ao-text-primary);
+}
+
+/* The pencil comes off below a laptop.
+ *
+ * TEMPORARY, for the designer to look at (2026-09-21) — it may come back, and
+ * this block is the whole change.
+ *
+ * The case for dropping it: it costs 48px on a 311px table, the row itself
+ * already opens the record, and the kebab beside it is the only route to the
+ * other eighteen columns. Measured, it also bought back the one width that
+ * still overflowed — at a 320px viewport the table now fits its body instead
+ * of pushing the kebab off the edge.
+ *
+ * `@media`, at the same 1024 floor as Edit Columns, and for the same reason:
+ * "mobile" is a device, not a narrow table. Keyed to the table's own container
+ * this would have gone missing on a 1024px laptop with the SidebarMenu docked,
+ * which leaves a 579px table — the exact trap the Edit Columns rule was
+ * corrected for. A laptop keeps its pencil however the sidebar sits. */
+@media (max-width: 1023px) {
+  .datatables--orders .datatables__col--edit {
+    display: none;
+  }
+}
+
+/* The two sit as one pair. Default cell padding put 16px on each side of the
+ * gap — 32px between the boxes and 48 between the glyphs, which read as two
+ * unrelated controls at opposite ends of the row rather than a set (designer,
+ * 2026-09-18). 4px between the boxes leaves 20px between the glyphs and keeps
+ * both 32px hit targets intact.
+ *
+ * The kebab keeps its RIGHT padding: that one is the row's edge, not the gap.
+ * `.table` is in the selector to out-specify the blanket cell padding, which
+ * names an element — the same trap documented on the mobile kebab rule below. */
+.datatables--orders .table td.datatables__col--edit,
+.datatables--orders .table th.datatables__col--edit {
+  padding-right: var(--ao-spacing-0);
+}
+
+.datatables--orders .table td.datatables__col--kebab,
+.datatables--orders .table th.datatables__col--kebab {
+  padding-left: var(--ao-spacing-1);
+  /* 8px, down from the 16px every other cell takes (designer, 2026-09-21).
+     The kebab is a 32px box with its own internal breathing room, so the
+     cell's padding is the only thing between the icon and the table edge —
+     and at 16 it read as a margin rather than a gutter. */
+  padding-right: var(--ao-spacing-3);
+}
+
+.datatables__row-edit [data-lucide] {
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+}
+
+/* Header label pair. Figma shortens some headers on mobile; both
+ * strings ship and the container query below chooses. */
+.datatables__label--short {
+  display: none;
+}
+
+/* ── Type=Orders · mobile (Overflow Content=Trigger) ─────
+ * Figma 3648:164467. Container-query driven, so it fires whenever the
+ * table's own column narrows past 768px — including a wide viewport
+ * with the SidebarMenu docked, which is exactly the case a viewport
+ * media query misses (CLAUDE.md §4a).
+ *
+ * Mobile keeps only ORDER + CUSTOMER; the other four columns move
+ * into the kebab detail row. Note the toolbar/footer paints revert to
+ * the shared header-bg/footer-bg — the white override above is
+ * desktop-only in Figma, not a global Orders trait.
+ */
+
+@container (max-width: 767px) {
+  .datatables--orders .datatables__toolbar,
+  .datatables--orders .datatables__footer {
+    padding: var(--ao-spacing-3) var(--ao-spacing-4);
+  }
+
+  .datatables--orders .datatables__toolbar {
+    background-color: var(--ao-datatable-table-header-bg);
+  }
+
+  .datatables--orders .datatables__footer {
+    background-color: var(--ao-datatable-table-footer-bg);
+  }
+
+  /* The word "Show" is dropped; the control and count carry it. */
+  .datatables--orders .datatables__meta-label {
+    display: none;
+  }
+
+  .datatables--orders .datatables__meta,
+  .datatables--orders .datatables__select,
+  .datatables--orders .datatables__footer {
+    font-size: var(--ao-font-fixed-2xs);
+  }
+
+  /* ── Footer at narrow widths ───────────────────────────
+   * Seven page buttons plus two arrows cannot fit beside a count on a phone:
+   * measured at 390px, the pager ran off the right edge from page 6 onward and
+   * "Showing 1–20 of 140 results" wrapped to two lines.
+   *
+   * The industry-standard answer is to page SEQUENTIALLY on a small screen —
+   * Material's table pagination, Polaris and Carbon all drop numbered buttons
+   * for arrows plus a position readout, and GOV.UK keeps only a heavily
+   * windowed set. Jumping to page 5 is a desktop gesture; on a phone the
+   * next/previous pair is what gets used.
+   *
+   * So the numbers become "Page 3 of 7" — one line at any page count, where a
+   * windowed set still grows with the total. The count loses its two framing
+   * words for the same reason: the range and the total ARE the sentence.
+   *
+   * Both fit on one row afterwards (measured 251px of content in 374px), so
+   * the footer is not stacked. Stacking is the fallback for when compressing
+   * is not enough, and it costs a row of height on the screen with the least
+   * of it. */
+  .datatables__page-numbers {
+    display: none;
+  }
+
+  .datatables__page-position {
+    display: inline-flex;
+  }
+
+  .datatables__count-word {
+    display: none;
+  }
+
+  /* Cells hug the left edge and hand every spare pixel to CUSTOMER. */
+  .datatables--orders .table thead th,
+  .datatables--orders .table tbody td {
+    padding: var(--ao-spacing-3) var(--ao-spacing-0)
+             var(--ao-spacing-3) var(--ao-spacing-4);
+  }
+
+  /* …which leaves the row's right edge to the kebab cell. When every column fits there is no kebab,
+     and the last column's text ran into the table edge (Mark, 2026-10-09, record tab cards).
+     DatatablesFit marks that column `datatables__col--end`; it takes the row's left inset as its
+     right. Was scoped to Live Dashboard (LiveDashboard.css, which still widens it to its 24px card
+     edge); now every fitted table gets it. */
+  .datatables--orders .table thead th.datatables__col--end,
+  .datatables--orders .table tbody td.datatables__col--end {
+    padding-right: var(--ao-spacing-4);
+  }
+
+  /* The HEADER keeps a taller block padding than the rows — 12px against the
+     cells' 8. The compaction above is right for a data row, where the value is
+     the content and the row is one of twenty; a header is one line of small
+     uppercase type that has to read as a band, and at 8px it sat too close to
+     the first row to do that (designer, 2026-09-21).
+     `padding-block` after the shorthand, so only the vertical half is
+     overridden and the horizontal hug above survives. */
+  .datatables--orders .table thead th {
+    padding-block: var(--ao-spacing-4);
+  }
+
+  /* Bold at every width (designer, 2026-09-24) — this step used to drop the
+     weight to semibold along with the size. */
+  .datatables--orders .table thead th {
+    font-size: var(--ao-font-fixed-4xs);
+    letter-spacing: var(--ao-tracking-7);
+  }
+
+  /* The detail panel's labels step down with the headers they stand in for
+     (designer, 2026-09-21) — they are the same labels, just read from behind
+     the kebab instead of across the row. */
+  .datatables--orders .datatables__detail-list dt {
+    font-size: var(--ao-font-fixed-4xs);
+  }
+
+  /* Mobile rows divide on the lighter border-secondary, not the
+     datatable border. */
+  .datatables--orders .table thead th,
+  .datatables--orders .table tbody td {
+    border-bottom-color: var(--ao-border-secondary);
+  }
+
+  .datatables--orders .datatables__order-no {
+    font-size: var(--ao-font-fixed-2xs);
+    font-weight: var(--ao-font-medium);
+  }
+
+  .datatables--orders .datatables__user-cell {
+    gap: var(--ao-spacing-2);
+  }
+
+  .datatables--orders .datatables__user-name {
+    font-size: var(--ao-font-fixed-2xs);
+  }
+
+  /* Figma leaves this size unbound (raw 12px); normalised to the
+     token per the designer's 2026-09-17 ruling on unbound values. */
+  .datatables--orders .datatables__user-role {
+    font-size: var(--ao-font-fixed-xxs);
+    line-height: var(--ao-leading-none);
+  }
+
+  /* Row height relaxes — the 64px desktop minimum would leave the
+     two-column layout looking gappy. */
+  .datatables--orders .table tbody td {
+    height: auto;
+  }
+
+  .datatables--orders .datatables__page-btn {
+    min-width: var(--ao-spacing-7);
+    height: var(--ao-spacing-7);
+  }
+
+  /* Short header labels ("Order" for "Order No"), per Figma. */
+  .datatables--orders .datatables__label--full {
+    display: none;
+  }
+
+  .datatables--orders .datatables__label--short {
+    display: inline;
+  }
+
+  /* Figma gives the mobile kebab cell px: --ao-spacing-0 — it sits
+     flush to the row edge. Without this the 12px inline padding the
+     rule above applies to every cell pushes the column past the card,
+     which is how it first rendered (measured 320px of table in a
+     273px container at 390px viewport).
+
+     `.table` is in the selector to out-specify the blanket cell rule
+     above: that one is (0,2,2) and `.datatables--orders td.<class>`
+     would only be (0,2,1) — equal class count, more elements, so the
+     blanket rule wins and the padding silently stays. */
+  .datatables--orders .table td.datatables__col--kebab,
+  .datatables--orders .table th.datatables__col--kebab {
+    /* Figma's mobile frame puts this cell flush to the row edge
+       (--ao-spacing-0 both sides). The designer overruled it on 2026-09-21:
+       flush reads as the kebab falling off the table, and it is the last
+       control in the row, so the row's own gutter has to come from here.
+       LEFT stays tight — it pairs with the pencil when there is one; RIGHT
+       takes the 12px the other cells use on their leading edge, so the gutter
+       matches the one down the left of the table.
+       An instruction that overrides the frame, not a reading of it. */
+    padding-left: var(--ao-spacing-1);    /* 4px */
+    padding-right: var(--ao-spacing-2);   /* 6px */
+  }
+}
+
+/* With no pencil beside it there is nothing to pair with, so the kebab takes a
+ * full cell's padding on both sides. Below 1024 the device rule hides the
+ * pencil, and a 4px gap then sits between the kebab and whatever data column
+ * happens to end the row — which reads as a collision rather than a pair.
+ *
+ * After the container block above, deliberately: both selectors carry the same
+ * specificity, so source order is what decides, and this one has to win where
+ * the two overlap (a narrow container on a phone). */
+@media (max-width: 1023px) {
+  .datatables--orders .table td.datatables__col--kebab,
+  .datatables--orders .table th.datatables__col--kebab {
+    padding-left: var(--ao-spacing-3);    /* 8px */
+  }
+}
+
+
+/* ── Adaptive columns (Type=Orders) ──────────────────────
+ * "Show as many columns as the container will allow" — and leave NO gap where
+ * another column would have fitted.
+ *
+ * This was a set of `@container` tier steps, which could not deliver that:
+ * CSS can only reveal columns at widths chosen in advance, so between two
+ * steps the table always carried dead space — measured at ~400px on a 780px
+ * table, enough for two more columns.
+ *
+ * So the fit is computed instead: ListingScreen measures each column's natural
+ * width and adds columns in order until the next one would not fit. CSS cannot
+ * do that — it has no way to ask "how wide would this column be?" — and this
+ * is the case CLAUDE.md §4a allows JS for, driven by a ResizeObserver on the
+ * table rather than a media query, because the CC sidebar changes this width
+ * with no window resize.
+ *
+ * Column ORDER is the priority order, which makes the Edit Columns drag handle
+ * the control for "show me this one first".
+ */
+
+/* Measured not to fit at the current width. */
+.datatables--orders .datatables__col--nofit {
+  display: none;
+}
+
+/* A column the user has switched OFF in Edit Columns stays off at every
+ * width. The tier decides whether there is ROOM for a column; this decides
+ * whether it is WANTED. Wanted-but-no-room still hides — which is why the
+ * Edit Columns panel marks those as unavailable rather than pretending.
+ *
+ * No `!important` needed: an @container block does not raise specificity,
+ * so this one-class-plus-one-class rule ties with every tier rule above and
+ * wins on source order. It must therefore stay LAST in this file. */
+.datatables--orders .datatables__col--off {
+  display: none;
+}
+
+/* During the measuring pass every column is shown so its natural width can be
+ * read. It happens inside a single task, so the browser never paints it.
+ *
+ * The TABLE must go to `max-content` for the same pass. Showing every column
+ * in a container-width table over-constrains it and each column collapses to
+ * MIN-content — which measures 74px for a column that renders at 125px, so
+ * the fit thinks two more columns will fit than actually do. At max-content
+ * each column reports the width it actually wants. */
+.datatables--orders .datatables__col--measuring {
+  display: table-cell;
+}
+
+.datatables--orders .table.datatables__table--measuring {
+  width: max-content;
+}
+
+/* ── Order No. cell: two lines ────────────────────────────
+ * The live query builds this cell as
+ * CAST(OrderCode AS VARCHAR) + '<br>' + ISNULL(ExternalCode,''), so the
+ * external code belongs under the order code rather than in a column of
+ * its own. */
+.datatables__order {
+  display: block;
+}
+
+.datatables__order-ext {
+  display: block;
+  font-size: var(--ao-font-fixed-xxs);
+  font-weight: var(--ao-font-regular);
+  color: var(--ao-text-contrast);
+}
+
+/* ── Sort + pagination state ─────────────────────────────
+ * The header's sort control is a chevron pair at rest and a single
+ * direction chevron once a column is the active sort, so the state reads
+ * without having to compare icons across headers.
+ */
+
+.datatables__sort--active {
+  color: var(--ao-text-primary);
+}
+
+/* The active chevron is the SAME family as the others, just darker — it was
+ * `--ao-icon-brand`, the one coloured thing in a row of grey, and it read as a
+ * link rather than as a state (designer, 2026-09-21).
+ *
+ * It does not need the colour: the control is a chevron PAIR at rest and a
+ * single direction chevron once a column is sorting, so the shape already
+ * carries the state, and `--ao-text-primary` matches the label sitting next to
+ * it — the two now darken together.
+ *
+ * This rule duplicated one 900 lines above that already said
+ * `--ao-text-primary`; the brand version was later and quietly won. The
+ * duplicate is gone with it. */
+.datatables__sort--active [data-lucide] {
+  color: var(--ao-text-primary);
+}
+
+/* Elided page numbers. Not a button — there is nothing to click. */
+.datatables__page-gap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--ao-spacing-8);
+  color: var(--ao-text-contrast);
+}
+
+
+/* The account chip is a Button, and buttons do not wrap — so a long account
+ * name ("Pinnacle Technologies") set the column's MIN-content width and, with
+ * twenty columns in play, pushed the whole table past its container. Capping
+ * it lets the column compress; the full name stays in the title. */
+/* ── Row detail panel: as many columns as fit ────────────
+ * The kebab reveals every column the row could not show — 15 of 20 on a wide
+ * table — and one pair per line made that a 425px scroll for a row whose
+ * point is to be glanced at. The panel now flows into as many columns as the
+ * table is wide enough for: one on a phone, four at ~955px (designer,
+ * 2026-09-21).
+ *
+ * `auto-fill`, not `auto-fit`: auto-fit collapses the empty tracks, so a row
+ * with a single hidden column would stretch that one pair across the whole
+ * panel. auto-fill holds the track width and leaves the rest empty, which is
+ * what a column layout should do.
+ *
+ * `--ao-size-3` (192px) is the minimum a pair needs: an uppercase label like
+ * PAYMENT METHOD plus values such as "Awaiting Payment Confirmation". Below
+ * that the count is what changes, never the legibility — which is why this is
+ * a minmax rather than a set of breakpoints. It needs no container query at
+ * all: the grid counts the space itself, so it is right at every width rather
+ * than at the three or four someone chose.
+ */
+.datatables--orders .datatables__detail-list {
+  grid-template-columns: repeat(auto-fill, minmax(var(--ao-size-3), 1fr));
+  /* 16px between pairs, against 0 inside one (designer, 2026-09-21) — the
+     grouping now comes entirely from this gap, so it has to be unambiguous. */
+  row-gap: var(--ao-spacing-5);
+  /* The detail cell is a <td>, and Table.css gives every cell
+     `white-space: nowrap` — which inherits straight into this list and would
+     push long values out of a 192px column. */
+  white-space: normal;
+}
+
+/* The pair is the grid item now, so it lays out rather than passing through,
+ * and the label sits ABOVE the value: side by side, labels could only align
+ * within their own column and the panel would read as ragged. */
+.datatables--orders .datatables__detail-item {
+  display: flex;
+  flex-direction: column;
+  /* No gap (designer, 2026-09-21). The label's own 16px leading already
+     carries the separation, and the 12px row-gap between pairs is what does
+     the grouping — so the 4px inside each pair was only height. */
+  gap: var(--ao-spacing-0);
+  min-inline-size: 0;
+}
+
+/* The base rule centres the label — correct in the two-column grid, where it
+ * centres the dt against its value on the same ROW. In a stacked pair the
+ * cross axis is horizontal, so the same declaration centred each label over
+ * its value and the panel read as ragged. */
+.datatables--orders .datatables__detail-list dt {
+  align-self: start;
+  /* The panel mirrors the TABLE's own rhythm, because that is what it is
+     standing in for: labels take the header's leading, values the cell's.
+     The label was inheriting the cell's 20px, which is loose for 12px
+     uppercase and was the slack worth taking out (designer, 2026-09-21).
+     The VALUE stays at 20px — 16px on 14px text is 1.14, too tight for the
+     wrapped lines a 192px column produces from a catalogue item name. */
+  line-height: var(--ao-leading-xs);     /* 16px, as .table thead th */
+}
+
+/* Stated rather than inherited, so the pair keeps its rhythm if the cell's
+ * line-height ever changes. */
+.datatables--orders .datatables__detail-list dd {
+  line-height: var(--ao-leading-sm);     /* 20px, as .table tbody td */
+}
+
+/* Long values wrap inside their column instead of widening it — catalogue
+ * item names here run past 80 characters. */
+.datatables--orders .datatables__detail-list dd {
+  overflow-wrap: break-word;
+}
+
+.datatables--orders .datatables__account-chip {
+  display: inline-block;
+  /* 160px, or the column if that is narrower. Under fixed layout the cell has
+     a definite width, so a percentage resolves against it — the chip follows
+     its column the way the title does, instead of being cropped when the fit
+     hands that column less than 160px (designer, 2026-09-21). */
+  max-inline-size: min(var(--ao-size-2), 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+
+/* Customer was the only column that could grow, so ALL the slack pooled in
+ * it: hiding a column in Edit Columns stretched it to 372px and left a
+ * visible gap between the name and the next column.
+ *
+ * `max-inline-size` does not fix it — a max-width on a table cell is advisory
+ * at best under `table-layout: auto`, and the column stayed at 372.
+ *
+ * So Customer gets a PREFERRED width rather than being the fluid one (auto
+ * layout treats `width` as a preference, so it still shrinks when space is
+ * tight), and a trailing spacer column absorbs whatever is left over. Nothing
+ * real stretches, the columns stay closed up, and the row rules still run the
+ * full width of the table. */
+/* The one column that can grow — and therefore the one that gets squeezed,
+ * because auto table layout takes its slack from whatever will yield.
+ *
+ * Measured without a floor: Customer sat at 124-163px across every desktop
+ * width and the NAME truncated on half the rows — "Michael Thompson" became
+ * "Michael Th…". A listing whose job is to identify a row cannot truncate the
+ * person's name; the role beneath it can, and does.
+ *
+ * 192px is what the cell actually needs: 24px avatar + 12px gap + ~124px for
+ * the longest name in the set + 32px of cell padding. It is a FLOOR, not a
+ * width — Customer still takes the slack above it.
+ *
+ * The cost is explicit and was measured rather than assumed: where the floor
+ * bites, the fit's correction loop drops the last column instead of squeezing
+ * this one, so a 940px table shows four data columns with a readable name
+ * where it showed five with an unreadable one. That is the trade the floor
+ * exists to make. */
+.datatables--orders .datatables__col--fluid {
+  width: var(--ao-size-4);                /* 240px preferred … */
+  min-inline-size: var(--ao-size-3);      /* … never below 192px */
+}
+
+/* …but the floor comes off once the table is narrow.
+ *
+ * At that width the table is down to its two identity columns plus the three
+ * structural ones, and 192px of Customer no longer leaves room for them:
+ * measured at a 390px viewport the table stood at 370px in a 309px body and
+ * pushed the KEBAB off the right-hand edge. No fixed floor survives the bottom
+ * of the range — at 320px there are 61px left for Customer — so it is removed
+ * rather than lowered to a number that is wrong one step further down.
+ *
+ * The trade inverts on a phone. Wide, the name matters more than one more
+ * column. Narrow, the kebab is the only route to the other eighteen columns,
+ * and a truncated name is still a name — the row is clickable either way.
+ *
+ * 400px, not the 767px the rest of the narrow rules use, and the difference
+ * matters: measured, the floor is safe down to a 419px table and only clips
+ * at 349px and below. Keyed to 767 it also fired on a DESKTOP with the
+ * sidebar docked — a 1000px window leaves a 555px table, which is narrow by
+ * container terms but has room for the floor, and names truncated there for
+ * no reason. The threshold is where the damage starts, not where the mobile
+ * layout starts.
+ *
+ * Its own container block, immediately after the rule it overrides, because a
+ * container query does NOT raise specificity: written up with the other
+ * narrow rules it tied with the floor above and lost on source order, which
+ * measured as the override silently doing nothing. */
+@container (max-width: 400px) {
+  .datatables--orders .datatables__col--fluid {
+    min-inline-size: var(--ao-spacing-0);
+  }
+}
+
+
+
+
+/* ── Cell truncation + rhythm (Type=Orders) ──────────────
+ * A long enumerated value ("Awaiting Payment Confirmation") must not set its
+ * column's width. Wrapping it was the first attempt and made rows uneven, so
+ * it truncates instead.
+ *
+ * The cap lives on an INNER span, not on the cell. `max-inline-size` on a td
+ * is advisory under `table-layout: auto` — the column still sizes to
+ * max-content and nothing truncates. A block inside the cell has a real
+ * max-content of its own, which is what actually caps the column.
+ */
+/* No cap at render: the column now has a width of its own, so the text fills
+ * it and ellipsises there. The shared 160px default would undo exactly the
+ * thing fixed layout was for — measured, it left 327px of empty space beside
+ * a 459px title cell. */
+.datatables--orders .datatables__article-title .datatables__truncate {
+  max-inline-size: none;
+}
+
+/* Only while MEASURING. At render the column has a width of its own and the
+ * text ellipsises to it — which is what removed the empty band beside every
+ * title. During the measure there is no column to follow, so free text would
+ * report its whole 436px and eat two columns' budget; 240 is the fluid
+ * column's own floor, so the two agree. */
+.datatables--orders .datatables__table--measuring .datatables__article-title .datatables__truncate {
+  max-inline-size: var(--ao-size-4);     /* 240px */
+}
+
+.datatables__truncate {
+  display: block;
+  max-inline-size: var(--ao-size-2);     /* 160px */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tighter vertical rhythm than the shared Table default (leading-md), which
+ * left the rows airy once there were twenty columns to scan across. Scoped to
+ * Orders rather than changed in Table.css — the Seating Planner's tables use
+ * that component too and were not part of this ask. */
+.datatables--orders .table thead th {
+  line-height: var(--ao-leading-xs);     /* 16px */
+}
+
+.datatables--orders .table tbody td {
+  line-height: var(--ao-leading-sm);     /* 20px */
+}
+
+/* ── Media Items: the thumbnail and the Type cell ─────────────
+ *
+ * Two cell treatments the other listing screens do not have. Both are scoped
+ * to the listing datatable, like every rule above.
+ *
+ * THE THUMBNAIL BOX. The live screen renders it at 60x60, which is off the
+ * spacing scale in both directions; the designer set it to spacing-11 (64px)
+ * on desktop and spacing-9 (48px) from mobile (2026-09-22). Square, because
+ * the source thumbnails are generated to a square and a listing row wants one
+ * predictable height.
+ *
+ * `@container`, not `@media`, and a max-width step rather than a min-width
+ * one — matching every other responsive rule in this file rather than being
+ * the single exception. The value is the designer's; the direction is the
+ * file's. */
+.datatables--orders .datatables__thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ao-spacing-11);     /* 64px */
+  block-size: var(--ao-spacing-11);
+  flex: 0 0 auto;
+  border-radius: var(--ao-radius-sm);
+  border: 1px solid var(--ao-border-secondary);
+  background-color: var(--ao-surface-secondary);
+  color: var(--ao-icon-contrast);
+  overflow: hidden;
+}
+
+.datatables--orders .datatables__thumb [data-lucide],
+.datatables--orders .datatables__thumb svg {
+  inline-size: var(--ao-icon-size-md);
+  block-size: var(--ao-icon-size-md);
+}
+
+/* The picture fills the box and is cropped to it. `cover` rather than
+ * `contain` because the box is square and the sources are not: letterboxing 50
+ * rows of mixed aspect ratios turns an even column into a ragged one, and a
+ * thumbnail is a glance, not a proof. The background stays underneath — it is
+ * what shows while the image loads and if it never arrives. */
+.datatables--orders .datatables__thumb img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The thumbnail column hugs its box: it never grows, and it must not be the
+ * column that gives way when the table narrows. */
+.datatables--orders .datatables__col--thumb {
+  inline-size: var(--ao-spacing-11);
+  white-space: nowrap;
+}
+
+/* Type = family glyph + the format in words. */
+.datatables--orders .datatables__type-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ao-spacing-2);
+  white-space: nowrap;
+}
+
+.datatables--orders .datatables__type-cell [data-lucide],
+.datatables--orders .datatables__type-cell svg {
+  inline-size: var(--ao-icon-size-sm);
+  block-size: var(--ao-icon-size-sm);
+  flex: 0 0 auto;
+  color: var(--ao-icon-contrast);
+}
+
+@container (max-width: 767px) {
+  .datatables--orders .datatables__thumb {
+    inline-size: var(--ao-spacing-9);    /* 48px */
+    block-size: var(--ao-spacing-9);
+  }
+
+  .datatables--orders .datatables__col--thumb {
+    inline-size: var(--ao-spacing-9);
+  }
+}

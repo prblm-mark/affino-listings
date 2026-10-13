@@ -1,0 +1,58 @@
+/* AdvisoryItem — one SEO Health advisory: warning icon, title, +/− toggle.
+ * State=Expanded shows the description inline (toggled in AdvisoryItem.js).
+ *
+ * Figma: Lus07xi8pPXLN87sQIyrEt · View & Edit page · set 3865:2098
+ */
+
+.advisory-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+}
+
+.advisory-item__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ao-spacing-3);
+}
+
+.advisory-item__icon {
+  flex-shrink: 0;
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  color: var(--ao-surface-warning);
+}
+
+.advisory-item__title {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-semibold);
+  font-size: var(--ao-font-fixed-2xs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-secondary);
+}
+
+.advisory-item__description {
+  margin: 0;
+  font-family: var(--ao-font-title);
+  font-weight: var(--ao-font-regular);
+  font-size: var(--ao-font-fixed-2xs);
+  line-height: var(--ao-leading-xs);
+  color: var(--ao-text-contrast);
+}
+
+.advisory-item:not(.advisory-item--expanded) .advisory-item__description {
+  display: none;
+}
+
+/* The toggle swaps plus ↔ minus; both icons are in the markup */
+.advisory-item__toggle .advisory-item__minus,
+.advisory-item--expanded .advisory-item__toggle .advisory-item__plus {
+  display: none;
+}
+
+.advisory-item--expanded .advisory-item__toggle .advisory-item__minus {
+  display: inline-flex;
+}

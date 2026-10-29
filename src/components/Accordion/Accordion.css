@@ -1,0 +1,191 @@
+/* Accordion component
+ * Figma node: 2527:2622 (file: Lus07xi8pPXLN87sQIyrEt)
+ * Tier: Component
+ * Types: Default, Separated Cards, All Open, Flush, Nested
+ * Sizes: Default (56px header), sm (40px header)
+ */
+
+/* ── Container ──────────────────────────────────────── */
+
+.acc {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  overflow: clip;
+}
+
+/* ── Item ───────────────────────────────────────────── */
+
+.acc__item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.acc__item + .acc__item {
+  border-top: 1px solid var(--ao-border-secondary);
+}
+
+/* ── Heading wrapper (semantic h-tag wrap) ─────────── */
+
+.acc__heading {
+  margin: 0;
+  font: inherit;
+}
+
+/* ── Trigger (header button) ───────────────────────── */
+
+.acc__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--ao-spacing-10);  /* 56px */
+  padding: 0 var(--ao-spacing-6);
+  background-color: var(--ao-surface-minimal);
+  border: 0;
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-sm);
+  font-weight: var(--ao-font-semibold);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.acc__trigger:focus-visible {
+  outline: 2px solid var(--ao-surface-brand);
+  outline-offset: -2px;
+}
+
+/* ── Chevron ────────────────────────────────────────── */
+
+.acc__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--ao-icon-size-sm);
+  height: var(--ao-icon-size-sm);
+  color: var(--ao-icon-contrast);
+  transition: transform var(--ao-transition-default);
+}
+
+.acc__chevron [data-lucide] {
+  width: 100%;
+  height: 100%;
+}
+
+.acc__item--open > .acc__heading .acc__chevron {
+  transform: rotate(180deg);
+}
+
+/* ── Panel (body) ───────────────────────────────────── */
+
+.acc__panel {
+  display: none;
+  padding: var(--ao-spacing-5) var(--ao-spacing-6) var(--ao-spacing-6);
+  background-color: var(--ao-surface-primary);
+  border-top: 1px solid var(--ao-border-secondary);
+  font-family: var(--ao-font-title);
+  font-size: var(--ao-font-fixed-xs);
+  font-weight: var(--ao-font-regular);
+  line-height: var(--ao-leading-md);
+  color: var(--ao-text-secondary);
+}
+
+.acc__panel > * + * {
+  margin-top: var(--ao-spacing-3);
+}
+
+.acc__panel p {
+  margin: 0;
+}
+
+.acc__item--open > .acc__panel {
+  display: block;
+}
+
+/* ── Size: sm ───────────────────────────────────────── */
+
+.acc--sm .acc__trigger {
+  height: var(--ao-spacing-8);  /* 40px fixed */
+  padding: 0 var(--ao-spacing-5);
+  font-size: var(--ao-font-fixed-xs);
+}
+
+.acc--sm .acc__panel {
+  padding: var(--ao-spacing-5);
+  font-size: var(--ao-font-fixed-xxs);
+  line-height: var(--ao-leading-sm);
+}
+
+/* ── Type: Separated Cards ──────────────────────────── */
+
+.acc--separated {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ao-spacing-3);
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.acc--separated .acc__item {
+  background-color: var(--ao-surface-primary);
+  border: 1px solid var(--ao-border-secondary);
+  border-radius: var(--ao-radius-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: clip;
+}
+
+.acc--separated .acc__item + .acc__item {
+  border-top: 1px solid var(--ao-border-secondary);
+}
+
+/* When closed in separated mode, the whole card is grey (matches the trigger bg) */
+.acc--separated .acc__item:not(.acc__item--open) {
+  background-color: var(--ao-surface-minimal);
+}
+
+/* ── Type: Flush — no outer card, divider-only ───── */
+
+.acc--flush {
+  background-color: transparent;
+  border: 0;
+  border-top: 1px solid var(--ao-border-secondary);
+  border-bottom: 1px solid var(--ao-border-secondary);
+  border-radius: 0;
+  padding: 0;
+}
+
+.acc--flush .acc__trigger {
+  background-color: transparent;
+  padding: var(--ao-spacing-5) 0;
+}
+
+.acc--flush .acc__panel {
+  padding: 0 0 var(--ao-spacing-5);
+  background-color: transparent;
+  border-top: 0;
+}
+
+.acc--flush.acc--sm .acc__trigger {
+  padding: var(--ao-spacing-4) 0;
+}
+
+.acc--flush.acc--sm .acc__panel {
+  padding: 0 0 var(--ao-spacing-4);
+}
+
+/* ── Type: Nested — composition only, no extra CSS ── */
+/* A nested accordion is just an .acc placed inside .acc__panel.
+   The panel adds gap so paragraph + nested accordion stack with breathing room. */
+.acc__panel .acc {
+  margin-top: var(--ao-spacing-4);
+}
